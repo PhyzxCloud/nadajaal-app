@@ -1,4 +1,6 @@
-import * as React from 'react';
+"use client"; // Add this directive to mark the component as client-side
+
+  import * as React from 'react';
   import * as SliderPrimitive from '@radix-ui/react-slider';
   import p5 from 'p5';
 
@@ -11,33 +13,36 @@ import * as React from 'react';
     const sketchRef = React.useRef<HTMLDivElement>(null);
 
     React.useEffect(() => {
-      const sketch = new p5((p: p5) => {
-        let angle = 0;
+      // Check if window is defined to ensure client-side execution
+      if (typeof window !== 'undefined') {
+        const sketch = new p5((p: p5) => {
+          let angle = 0;
 
-        p.setup = () => {
-          p.createCanvas(400, 200).parent(sketchRef.current!);
-          p.background(255);
-        };
+          p.setup = () => {
+            p.createCanvas(400, 200).parent(sketchRef.current!);
+            p.background(255);
+          };
 
-        p.draw = () => {
-          p.background(255);
-          p.translate(p.width / 2, p.height / 2);
-          p.stroke(0);
-          p.noFill();
-          p.beginShape();
-          for (let i = 0; i < 360; i++) {
-            let rad = p.radians(i);
-            let r = p.map(p.sin(angle + rad * (leftFreq / 100)), -1, 1, 50, 150);
-            let x = r * p.cos(rad);
-            let y = r * p.sin(rad);
-            p.vertex(x, y);
-          }
-          p.endShape();
-          angle += 0.05;
-        };
-      });
+          p.draw = () => {
+            p.background(255);
+            p.translate(p.width / 2, p.height / 2);
+            p.stroke(0);
+            p.noFill();
+            p.beginShape();
+            for (let i = 0; i < 360; i++) {
+              let rad = p.radians(i);
+              let r = p.map(p.sin(angle + rad * (leftFreq / 100)), -1, 1, 50, 150);
+              let x = r * p.cos(rad);
+              let y = r * p.sin(rad);
+              p.vertex(x, y);
+            }
+            p.endShape();
+            angle += 0.05;
+          };
+        });
 
-      return () => sketch.remove();
+        return () => sketch.remove();
+      }
     }, [leftFreq]);
 
     return (
