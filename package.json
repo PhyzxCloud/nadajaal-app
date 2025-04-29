@@ -1,28 +1,28 @@
 {
-    "name": "nadajaal-app",
-    "version": "0.1.0",
-    "private": true,
-    "scripts": {
-      "dev": "next dev",
-      "build": "tailwindcss -o ./styles/tailwind.css --minify && next build",
-      "start": "next start",
-      "postinstall": "tailwindcss init -p"
-    },
-    "dependencies": {
-      "@types/node": "^20",
-      "@types/react": "^18",
-      "@types/react-dom": "^18",
-      "@radix-ui/react-slider": "^1.1.2",
-      "next": "14.2.3",
-      "p5": "^1.4.2",
-      "react": "^18",
-      "react-dom": "^18",
-      "typescript": "^5"
-    },
-    "devDependencies": {
-      "autoprefixer": "^10.4.19",
-      "postcss": "^8.4.38",
-      "tailwindcss": "^3.4.10",
-      "@types/p5": "^1.4.2" // Add this line
-    }
+  "name": "nadajaal-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "tailwindcss -o ./styles/tailwind.css --minify && next build",
+    "start": "next start",
+    "postinstall": "tailwindcss init -p"
+  },
+  "dependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "@radix-ui/react-slider": "^1.1.2",
+    "next": "14.2.3",
+    "p5": "^1.4.2",
+    "react": "^18",
+    "react-dom": "^18",
+    "typescript": "^5"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.10",
+    "@types/p5": "^1.4.2"
   }
+}
