@@ -6,7 +6,7 @@ import * as SliderPrimitive from '@radix-ui/react-slider';
 const ControlPanel = () => {
   const [leftFreq, setLeftFreq] = React.useState(200);
   const [rightFreq, setRightFreq] = React.useState(210);
-  const [baseFreq, setBaseFreq] = React.useState(200); // New slider for both frequencies
+  const [baseFreq, setBaseFreq] = React.useState(0); // Adjusted to start at 0
   const [toneType, setToneType] = React.useState('Sine');
   const [bgMusic, setBgMusic] = React.useState('None');
   const [volume, setVolume] = React.useState(50);
@@ -21,10 +21,10 @@ const ControlPanel = () => {
   const leftPannerRef = React.useRef<StereoPannerNode | null>(null);
   const rightPannerRef = React.useRef<StereoPannerNode | null>(null);
   const gainNodeRef = React.useRef<GainNode | null>(null);
-  const [leftSketch, setLeftSketch] = React.useState<any>(null);
-  const [rightSketch, setRightSketch] = React.useState<any>(null);
-  const [overlapSketch, setOverlapSketch] = React.useState<any>(null);
-  const [mandalaSketch, setMandalaSketch] = React.useState<any>(null);
+  const leftSketchRefInstance = React.useRef<any>(null);
+  const rightSketchRefInstance = React.useRef<any>(null);
+  const overlapSketchRefInstance = React.useRef<any>(null);
+  const mandalaSketchRefInstance = React.useRef<any>(null);
 
   // Sync base frequency with left and right frequencies
   React.useEffect(() => {
@@ -66,8 +66,8 @@ const ControlPanel = () => {
       rightOscillatorRef.current.connect(rightPannerRef.current!);
       rightOscillatorRef.current.start();
 
-      // Initialize sketches only if not already initialized
-      if (!leftSketch) initializeSketches();
+      // Initialize sketches if not already initialized
+      if (!leftSketchRefInstance.current) initializeSketches();
     }
     setIsPlaying(true);
   };
@@ -93,14 +93,14 @@ const ControlPanel = () => {
       leftOscillatorRef.current = null;
       rightOscillatorRef.current = null;
       // Clean up sketches
-      leftSketch?.remove();
-      rightSketch?.remove();
-      overlapSketch?.remove();
-      mandalaSketch?.remove();
-      setLeftSketch(null);
-      setRightSketch(null);
-      setOverlapSketch(null);
-      setMandalaSketch(null);
+      leftSketchRefInstance.current?.remove();
+      rightSketchRefInstance.current?.remove();
+      overlapSketchRefInstance.current?.remove();
+      mandalaSketchRefInstance.current?.remove();
+      leftSketchRefInstance.current = null;
+      rightSketchRefInstance.current = null;
+      overlapSketchRefInstance.current = null;
+      mandalaSketchRefInstance.current = null;
     }
     setIsPlaying(false);
   };
@@ -134,7 +134,7 @@ const ControlPanel = () => {
       const p5 = p5Module.default;
 
       // Left Frequency Waveform
-      if (!leftSketch) {
+      if (!leftSketchRefInstance.current) {
         const newLeftSketch = new p5((p: any) => {
           p.setup = () => {
             p.createCanvas(600, 150).parent(leftSketchRef.current!);
@@ -149,18 +149,20 @@ const ControlPanel = () => {
               p.noFill();
               p.beginShape();
               for (let x = 0; x < p.width; x++) {
-                let y = p.height / 2 + p.sin(p.frameCount * 0.01 + (x / 50) * (leftFreq / 100)) * (p.height / 4) * (volume / 100);
+                let y = p.height / 2 + p.sin(p.frameCount * 0.05 + (x / 50) * (leftFreq / 100)) * (p.height / 4) * (volume / 100);
                 p.vertex(x, y);
               }
               p.endShape();
+            } else {
+              p.background(255); // Clear canvas when not playing
             }
           };
         });
-        setLeftSketch(newLeftSketch);
+        leftSketchRefInstance.current = newLeftSketch;
       }
 
       // Right Frequency Waveform
-      if (!rightSketch) {
+      if (!rightSketchRefInstance.current) {
         const newRightSketch = new p5((p: any) => {
           p.setup = () => {
             p.createCanvas(600, 150).parent(rightSketchRef.current!);
@@ -175,18 +177,20 @@ const ControlPanel = () => {
               p.noFill();
               p.beginShape();
               for (let x = 0; x < p.width; x++) {
-                let y = p.height / 2 + p.sin(p.frameCount * 0.01 + (x / 50) * (rightFreq / 100)) * (p.height / 4) * (volume / 100);
+                let y = p.height / 2 + p.sin(p.frameCount * 0.05 + (x / 50) * (rightFreq / 100)) * (p.height / 4) * (volume / 100);
                 p.vertex(x, y);
               }
               p.endShape();
+            } else {
+              p.background(255); // Clear canvas when not playing
             }
           };
         });
-        setRightSketch(newRightSketch);
+        rightSketchRefInstance.current = newRightSketch;
       }
 
       // Overlap Waveform (Beat Frequency)
-      if (!overlapSketch) {
+      if (!overlapSketchRefInstance.current) {
         const newOverlapSketch = new p5((p: any) => {
           p.setup = () => {
             p.createCanvas(600, 150).parent(overlapSketchRef.current!);
@@ -202,18 +206,20 @@ const ControlPanel = () => {
               p.noFill();
               p.beginShape();
               for (let x = 0; x < p.width; x++) {
-                let y = p.height / 2 + p.sin(p.frameCount * 0.01 + (x / 50) * (beatFreq / 100)) * (p.height / 4) * (volume / 100);
+                let y = p.height / 2 + p.sin(p.frameCount * 0.05 + (x / 50) * (beatFreq / 100)) * (p.height / 4) * (volume / 100);
                 p.vertex(x, y);
               }
               p.endShape();
+            } else {
+              p.background(255); // Clear canvas when not playing
             }
           };
         });
-        setOverlapSketch(newOverlapSketch);
+        overlapSketchRefInstance.current = newOverlapSketch;
       }
 
       // Sacred Geometry Mandala
-      if (!mandalaSketch) {
+      if (!mandalaSketchRefInstance.current) {
         const newMandalaSketch = new p5((p: any) => {
           p.setup = () => {
             p.createCanvas(600, 300).parent(mandalaSketchRef.current!);
@@ -242,10 +248,12 @@ const ControlPanel = () => {
                 }
                 p.endShape(p.CLOSE);
               }
+            } else {
+              p.background(255); // Clear canvas when not playing
             }
           };
         });
-        setMandalaSketch(newMandalaSketch);
+        mandalaSketchRefInstance.current = newMandalaSketch;
       }
     }).catch((err) => console.error('Failed to load p5:', err));
   };
@@ -283,7 +291,7 @@ const ControlPanel = () => {
           <SliderPrimitive.Root
             value={[baseFreq]}
             onValueChange={(value) => setBaseFreq(value[0])}
-            min={50}
+            min={0} // Adjusted to start at 0
             max={1000}
             step={1}
             className="relative flex items-center w-full mt-2"
