@@ -2,10 +2,6 @@
 
   import * as React from 'react';
   import * as SliderPrimitive from '@radix-ui/react-slider';
-  import dynamic from 'next/dynamic';
-
-  // Dynamically import p5 with SSR disabled
-  const P5 = dynamic(() => import('p5'), { ssr: false });
 
   const ControlPanel = () => {
     const [leftFreq, setLeftFreq] = React.useState(200);
@@ -16,34 +12,36 @@
     const sketchRef = React.useRef<HTMLDivElement>(null);
 
     React.useEffect(() => {
-      // P5 will only be available on the client side due to dynamic import
-      const sketch = new P5((p: any) => {
-        let angle = 0;
+      // Dynamically import p5 and instantiate it only on the client
+      import('p5').then((p5Module) => {
+        const p5 = p5Module.default;
+        const sketch = new p5((p: any) => {
+          let angle = 0;
 
-        p.setup = () => {
-          p.createCanvas(400, 200).parent(sketchRef.current!);
-          p.background(255);
-        };
+          p.setup = () => {
+            p.createCanvas(400, 200).parent(sketchRef.current!);
+            p.background(255);
+          };
 
-        p.draw = () => {
-          p.background(255);
-          p.translate(p.width / 2, p.height / 2);
-          p.stroke(0);
-          p.noFill();
-          p.beginShape();
-          for (let i = 0; i < 360; i++) {
-            let rad = p.radians(i);
-            let r = p.map(p.sin(angle + rad * (leftFreq / 100)), -1, 1, 50, 150);
-            let x = r * p.cos(rad);
-            let y = r * p.sin(rad);
-            p.vertex(x, y);
-          }
-          p.endShape();
-          angle += 0.05;
-        };
-      });
-
-      return () => sketch.remove();
+          p.draw = () => {
+            p.background(255);
+            p.translate(p.width / 2, p.height / 2);
+            p.stroke(0);
+            p.noFill();
+            p.beginShape();
+            for (let i = 0; i < 360; i++) {
+              let rad = p.radians(i);
+              let r = p.map(p.sin(angle + rad * (leftFreq / 100)), -1, 1, 50, 150);
+              let x = r * p.cos(rad);
+              let y = r * p.sin(rad);
+              p.vertex(x, y);
+            }
+            p.endShape();
+            angle += 0.05;
+          };
+        });
+        return () => sketch.remove();
+      }).catch((err) => console.error('Failed to load p5:', err));
     }, [leftFreq]);
 
     return (
