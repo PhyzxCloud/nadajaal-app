@@ -26,7 +26,6 @@ const ControlPanel = () => {
   const rightSketchRefInstance = React.useRef<any>(null);
   const overlapSketchRefInstance = React.useRef<any>(null);
   const mandalaSketchRefInstance = React.useRef<any>(null);
-  // Ref to store current frequencies for p5 sketches
   const freqRef = React.useRef({ leftFreq: 174, rightFreq: 174 });
 
   // Load p5.js script dynamically on the client side
@@ -64,10 +63,10 @@ const ControlPanel = () => {
     setRightFreq(baseFreq + diff);
   }, [baseFreq]);
 
-  // Update freqRef when frequencies change
+  // Update freqRef when frequencies or volume change
   React.useEffect(() => {
     freqRef.current = { leftFreq, rightFreq };
-  }, [leftFreq, rightFreq]);
+  }, [leftFreq, rightFreq, volume]);
 
   // Initialize AudioContext and Oscillators
   const setupAudio = () => {
@@ -145,13 +144,10 @@ const ControlPanel = () => {
     if (rightOscillatorRef.current) {
       rightOscillatorRef.current.frequency.setValueAtTime(rightFreq, audioContextRef.current!.currentTime);
     }
-  }, [leftFreq, rightFreq]);
-
-  React.useEffect(() => {
     if (gainNodeRef.current) {
       gainNodeRef.current.gain.setValueAtTime(volume / 100, audioContextRef.current!.currentTime);
     }
-  }, [volume]);
+  }, [leftFreq, rightFreq, volume]);
 
   React.useEffect(() => {
     if (leftOscillatorRef.current && rightOscillatorRef.current) {
@@ -189,12 +185,12 @@ const ControlPanel = () => {
               p.background(255);
               p.stroke(255, 99, 71); // Tomato red
               p.strokeWeight(2);
-              // Simple sine wave based on leftFreq
+              const amplitude = (volume / 100) * 50; // Scale amplitude with volume
               for (let x = 0; x < p.width; x++) {
-                let y = p.height / 2 + p.sin(x * 0.1 + p.frameCount * 0.05) * 50 * (freqRef.current.leftFreq / 174);
+                let y = p.height / 2 + p.sin(x * 0.1 + p.frameCount * 0.05) * amplitude * (freqRef.current.leftFreq / 174);
                 p.point(x, y);
               }
-              console.log('Left sketch drawing, leftFreq:', freqRef.current.leftFreq);
+              console.log('Left sketch drawing, leftFreq:', freqRef.current.leftFreq, 'volume:', volume);
             } else {
               p.background(255);
             }
@@ -217,12 +213,12 @@ const ControlPanel = () => {
               p.background(255);
               p.stroke(135, 206, 250); // Sky blue
               p.strokeWeight(2);
-              // Simple sine wave based on rightFreq
+              const amplitude = (volume / 100) * 50; // Scale amplitude with volume
               for (let x = 0; x < p.width; x++) {
-                let y = p.height / 2 + p.sin(x * 0.1 + p.frameCount * 0.05) * 50 * (freqRef.current.rightFreq / 174);
+                let y = p.height / 2 + p.sin(x * 0.1 + p.frameCount * 0.05) * amplitude * (freqRef.current.rightFreq / 174);
                 p.point(x, y);
               }
-              console.log('Right sketch drawing, rightFreq:', freqRef.current.rightFreq);
+              console.log('Right sketch drawing, rightFreq:', freqRef.current.rightFreq, 'volume:', volume);
             } else {
               p.background(255);
             }
@@ -246,12 +242,12 @@ const ControlPanel = () => {
               p.stroke(255, 215, 0); // Gold
               p.strokeWeight(3);
               const beatFreq = Math.abs(freqRef.current.rightFreq - freqRef.current.leftFreq);
-              // Simple beat frequency visualization
+              const amplitude = (volume / 100) * 50; // Scale amplitude with volume
               for (let x = 0; x < p.width; x++) {
-                let y = p.height / 2 + p.sin(x * 0.1 + p.frameCount * 0.05 * (beatFreq / 10)) * 50;
+                let y = p.height / 2 + p.sin(x * 0.1 + p.frameCount * 0.05 * (beatFreq / 10)) * amplitude;
                 p.point(x, y);
               }
-              console.log('Overlap sketch drawing, beatFreq:', beatFreq);
+              console.log('Overlap sketch drawing, beatFreq:', beatFreq, 'volume:', volume);
             } else {
               p.background(255);
             }
@@ -273,10 +269,26 @@ const ControlPanel = () => {
             if (isPlaying) {
               p.background(255);
               p.stroke(0);
-              p.strokeWeight(2);
-              const radius = 100 + Math.sin(p.frameCount * 0.05) * 20; // Dynamic radius based on time
-              p.ellipse(p.width / 2, p.height / 2, radius, radius);
-              console.log('Mandala sketch drawing');
+              p.strokeWeight(1);
+              const beatFreq = Math.abs(freqRef.current.rightFreq - freqRef.current.leftFreq);
+              const baseRadius = 50 + (beatFreq / 10); // Base radius influenced by beat frequency
+              const amplitude = (volume / 100) * 50; // Scale size with volume
+              const radius = baseRadius + p.sin(p.frameCount * 0.05) * amplitude;
+
+              // Draw Flower of Life pattern
+              for (let i = 0; i < 6; i++) {
+                let angle = p.TWO_PI / 6 * i;
+                let x = p.width / 2 + p.cos(angle) * radius;
+                let y = p.height / 2 + p.sin(angle) * radius;
+                p.ellipse(x, y, radius * 0.5, radius * 0.5);
+                for (let j = 0; j < 6; j++) {
+                  let innerAngle = p.TWO_PI / 6 * j;
+                  let innerX = x + p.cos(innerAngle) * (radius * 0.5);
+                  let innerY = y + p.sin(innerAngle) * (radius * 0.5);
+                  p.ellipse(innerX, innerY, radius * 0.3, radius * 0.3);
+                }
+              }
+              console.log('Mandala sketch drawing, beatFreq:', beatFreq, 'volume:', volume);
             } else {
               p.background(255);
             }
