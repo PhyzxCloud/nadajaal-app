@@ -135,8 +135,10 @@ export default function ControlPanel() {
       gainNode.current = { gainL, gainR };
     }
 
-    if (backgroundMusic !== 'none' && !bgAudio.current) {
-      const audio = new Audio(backgroundTracks[backgroundMusic]);
+    // Only initialize background audio if a valid URL exists
+    const bgUrl = backgroundTracks[backgroundMusic];
+    if (bgUrl && !bgAudio.current) {
+      const audio = new Audio(bgUrl);
       audio.loop = true;
       const source = audioCtx.createMediaElementSource(audio);
       const gain = audioCtx.createGain();
@@ -184,14 +186,17 @@ export default function ControlPanel() {
 
       if (backgroundMusic !== 'none') {
         if (!bgAudio.current) {
-          const audio = new Audio(backgroundTracks[backgroundMusic]);
-          audio.loop = true;
-          const source = audioCtx.createMediaElementSource(audio);
-          const gain = audioCtx.createGain();
-          gain.gain.setValueAtTime(volume * 0.3, audioCtx.currentTime);
-          source.connect(gain).connect(audioCtx.destination);
-          audio.play();
-          bgAudio.current = { audio, gain };
+          const bgUrl = backgroundTracks[backgroundMusic];
+          if (bgUrl) {
+            const audio = new Audio(bgUrl);
+            audio.loop = true;
+            const source = audioCtx.createMediaElementSource(audio);
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(volume * 0.3, audioCtx.currentTime);
+            source.connect(gain).connect(audioCtx.destination);
+            audio.play();
+            bgAudio.current = { audio, gain };
+          }
         }
       } else {
         if (bgAudio.current) {
