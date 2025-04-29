@@ -4,7 +4,7 @@
       "private": true,
       "scripts": {
         "dev": "next dev",
-        "build": "next build",
+        "build": "tailwindcss -o ./styles/tailwind.css --minify && next build",
         "start": "next start",
         "postinstall": "tailwindcss init -p"
       },
