@@ -34,7 +34,7 @@ const ControlPanel = () => {
           p.beginShape();
           for (let x = 0; x < p.width; x++) {
             let y = p.height / 2 + p.sin(t + (x / 50) * (leftFreq / 100)) * (p.height / 4);
-            p(vertex(x, y);
+            p.vertex(x, y); // Fixed typo: p.vertex instead of p(vertex
           }
           p.endShape();
           t += 0.05;
@@ -58,7 +58,7 @@ const ControlPanel = () => {
           p.beginShape();
           for (let x = 0; x < p.width; x++) {
             let y = p.height / 2 + p.sin(t + (x / 50) * (rightFreq / 100)) * (p.height / 4);
-            p.vertex(x, y);
+            p.vertex(x, y); // Fixed typo: p.vertex instead of p(vertex
           }
           p.endShape();
           t += 0.05;
@@ -97,7 +97,7 @@ const ControlPanel = () => {
             let y1 = p.sin(t + (x / 50) * (leftFreq / 100));
             let y2 = p.sin(t + (x / 50) * (rightFreq / 100));
             let y = p.height / 2 + (y1 + y2) * (p.height / 4) * (toneType === 'Flute' ? 0.8 : 1);
-            p.vertex(x, y);
+            p.vertex(x, y); // Fixed typo: p.vertex instead of p(vertex
           }
           p.endShape();
 
