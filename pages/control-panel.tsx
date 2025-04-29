@@ -175,11 +175,11 @@ export default function ControlPanel() {
       if (oscRight.current) oscRight.current.frequency.setValueAtTime(rightFreq, audioCtx.currentTime);
       if (gainNode.current) {
         if ('gain' in gainNode.current) {
-          gainNode.current.gain.setValueAtTime(volume, audioCtx.currentTime);
+          (gainNode.current as GainNode).gain.setValueAtTime(volume, audioCtx.currentTime);
         } else {
           const gainValue = Math.abs(leftFreq - rightFreq) <= 4 ? 0.4 : 0.5;
-          gainNode.current.gainL.setValueAtTime(volume * gainValue, audioCtx.currentTime);
-          gainNode.current.gainR.setValueAtTime(volume * gainValue, audioCtx.currentTime);
+          (gainNode.current as { gainL: GainNode; gainR: GainNode }).gainL.gain.setValueAtTime(volume * gainValue, audioCtx.currentTime);
+          (gainNode.current as { gainL: GainNode; gainR: GainNode }).gainR.gain.setValueAtTime(volume * gainValue, audioCtx.currentTime);
         }
       }
       if (bgAudio.current) bgAudio.current.gain.gain.setValueAtTime(volume * 0.3, audioCtx.currentTime);
