@@ -6,19 +6,112 @@ import * as SliderPrimitive from '@radix-ui/react-slider';
 const ControlPanel = () => {
   const [leftFreq, setLeftFreq] = React.useState(200);
   const [rightFreq, setRightFreq] = React.useState(210);
-  const [toneType, setToneType] = React.useState('Flute');
+  const [toneType, setToneType] = React.useState('Sine');
   const [bgMusic, setBgMusic] = React.useState('None');
   const [volume, setVolume] = React.useState(50);
+  const [isPlaying, setIsPlaying] = React.useState(false);
   const leftSketchRef = React.useRef<HTMLDivElement>(null);
   const rightSketchRef = React.useRef<HTMLDivElement>(null);
   const overlapSketchRef = React.useRef<HTMLDivElement>(null);
+  const audioContextRef = React.useRef<AudioContext | null>(null);
+  const leftOscillatorRef = React.useRef<OscillatorNode | null>(null);
+  const rightOscillatorRef = React.useRef<OscillatorNode | null>(null);
+  const leftPannerRef = React.useRef<StereoPannerNode | null>(null);
+  const rightPannerRef = React.useRef<StereoPannerNode | null>(null);
+  const gainNodeRef = React.useRef<GainNode | null>(null);
+
+  // Initialize AudioContext and Oscillators
+  const setupAudio = () => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContext();
+      gainNodeRef.current = audioContextRef.current.createGain();
+      gainNodeRef.current.gain.setValueAtTime(volume / 100, audioContextRef.current.currentTime);
+      gainNodeRef.current.connect(audioContextRef.current.destination);
+
+      leftPannerRef.current = audioContextRef.current.createStereoPanner();
+      leftPannerRef.current.pan.setValueAtTime(-1, audioContextRef.current.currentTime); // Left ear
+      leftPannerRef.current.connect(gainNodeRef.current);
+
+      rightPannerRef.current = audioContextRef.current.createStereoPanner();
+      rightPannerRef.current.pan.setValueAtTime(1, audioContextRef.current.currentTime); // Right ear
+      rightPannerRef.current.connect(gainNodeRef.current);
+    }
+  };
+
+  const startAudio = () => {
+    setupAudio();
+    if (audioContextRef.current && !leftOscillatorRef.current && !rightOscillatorRef.current) {
+      leftOscillatorRef.current = audioContextRef.current.createOscillator();
+      leftOscillatorRef.current.type = toneType.toLowerCase() as OscillatorType;
+      leftOscillatorRef.current.frequency.setValueAtTime(leftFreq, audioContextRef.current.currentTime);
+      leftOscillatorRef.current.connect(leftPannerRef.current!);
+      leftOscillatorRef.current.start();
+
+      rightOscillatorRef.current = audioContextRef.current.createOscillator();
+      rightOscillatorRef.current.type = toneType.toLowerCase() as OscillatorType;
+      rightOscillatorRef.current.frequency.setValueAtTime(rightFreq, audioContextRef.current.currentTime);
+      rightOscillatorRef.current.connect(rightPannerRef.current!);
+      rightOscillatorRef.current.start();
+    }
+    setIsPlaying(true);
+  };
+
+  const pauseAudio = () => {
+    if (audioContextRef.current) {
+      audioContextRef.current.suspend();
+      setIsPlaying(false);
+    }
+  };
+
+  const resumeAudio = () => {
+    if (audioContextRef.current) {
+      audioContextRef.current.resume();
+      setIsPlaying(true);
+    }
+  };
+
+  const stopAudio = () => {
+    if (leftOscillatorRef.current && rightOscillatorRef.current) {
+      leftOscillatorRef.current.stop();
+      rightOscillatorRef.current.stop();
+      leftOscillatorRef.current = null;
+      rightOscillatorRef.current = null;
+    }
+    setIsPlaying(false);
+  };
+
+  // Update frequency and volume in real-time
+  React.useEffect(() => {
+    if (leftOscillatorRef.current) {
+      leftOscillatorRef.current.frequency.setValueAtTime(leftFreq, audioContextRef.current!.currentTime);
+    }
+    if (rightOscillatorRef.current) {
+      rightOscillatorRef.current.frequency.setValueAtTime(rightFreq, audioContextRef.current!.currentTime);
+    }
+  }, [leftFreq, rightFreq]);
 
   React.useEffect(() => {
+    if (gainNodeRef.current) {
+      gainNodeRef.current.gain.setValueAtTime(volume / 100, audioContextRef.current!.currentTime);
+    }
+  }, [volume]);
+
+  React.useEffect(() => {
+    if (leftOscillatorRef.current && rightOscillatorRef.current) {
+      leftOscillatorRef.current.type = toneType.toLowerCase() as OscillatorType;
+      rightOscillatorRef.current.type = toneType.toLowerCase() as OscillatorType;
+    }
+  }, [toneType]);
+
+  // Set up p5.js sketches (run only once)
+  React.useEffect(() => {
+    let leftSketch: any, rightSketch: any, overlapSketch: any;
+
     import('p5').then((p5Module) => {
       const p5 = p5Module.default;
 
       // Left Frequency Waveform
-      const leftSketch = new p5((p: any) => {
+      leftSketch = new p5((p: any) => {
         let t = 0;
 
         p.setup = () => {
@@ -34,7 +127,7 @@ const ControlPanel = () => {
           p.beginShape();
           for (let x = 0; x < p.width; x++) {
             let y = p.height / 2 + p.sin(t + (x / 50) * (leftFreq / 100)) * (p.height / 4);
-            p.vertex(x, y); // Fixed typo: p.vertex instead of p(vertex
+            p.vertex(x, y);
           }
           p.endShape();
           t += 0.05;
@@ -42,7 +135,7 @@ const ControlPanel = () => {
       });
 
       // Right Frequency Waveform
-      const rightSketch = new p5((p: any) => {
+      rightSketch = new p5((p: any) => {
         let t = 0;
 
         p.setup = () => {
@@ -58,7 +151,7 @@ const ControlPanel = () => {
           p.beginShape();
           for (let x = 0; x < p.width; x++) {
             let y = p.height / 2 + p.sin(t + (x / 50) * (rightFreq / 100)) * (p.height / 4);
-            p.vertex(x, y); // Fixed typo: p.vertex instead of p(vertex
+            p.vertex(x, y);
           }
           p.endShape();
           t += 0.05;
@@ -66,7 +159,7 @@ const ControlPanel = () => {
       });
 
       // Overlap Waveform with Tone Type and Particle Effects
-      const overlapSketch = new p5((p: any) => {
+      overlapSketch = new p5((p: any) => {
         let t = 0;
         let particles: { x: number; y: number; speed: number }[] = [];
 
@@ -96,8 +189,8 @@ const ControlPanel = () => {
           for (let x = 0; x < p.width; x++) {
             let y1 = p.sin(t + (x / 50) * (leftFreq / 100));
             let y2 = p.sin(t + (x / 50) * (rightFreq / 100));
-            let y = p.height / 2 + (y1 + y2) * (p.height / 4) * (toneType === 'Flute' ? 0.8 : 1);
-            p.vertex(x, y); // Fixed typo: p.vertex instead of p(vertex
+            let y = p.height / 2 + (y1 + y2) * (p.height / 4) * (toneType === 'Sine' ? 0.8 : 1);
+            p.vertex(x, y);
           }
           p.endShape();
 
@@ -108,22 +201,23 @@ const ControlPanel = () => {
             particle.x += particle.speed * (volume / 50);
             let y1 = p.sin(t + (particle.x / 50) * (leftFreq / 100));
             let y2 = p.sin(t + (particle.x / 50) * (rightFreq / 100));
-            particle.y = p.height / 2 + (y1 + y2) * (p.height / 4) * (toneType === 'Flute' ? 0.8 : 1);
+            particle.y = p.height / 2 + (y1 + y2) * (p.height / 4) * (toneType === 'Sine' ? 0.8 : 1);
             if (particle.x < 0 || particle.x > p.width) particle.speed *= -1;
-            p.ellipse(particle.x, particle.y, 5, 5);
+            p.ellipse(particle.x, particle.y, toneType === 'Square' ? 8 : 5, toneType === 'Square' ? 8 : 5);
           });
 
           t += 0.05;
         };
       });
-
-      return () => {
-        leftSketch.remove();
-        rightSketch.remove();
-        overlapSketch.remove();
-      };
     }).catch((err) => console.error('Failed to load p5:', err));
-  }, [leftFreq, rightFreq, toneType, volume]);
+
+    return () => {
+      leftSketch?.remove();
+      rightSketch?.remove();
+      overlapSketch?.remove();
+      stopAudio();
+    };
+  }, []); // Empty dependency array to run only once
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-100 to-indigo-100 p-6">
@@ -144,7 +238,7 @@ const ControlPanel = () => {
           </div>
         </div>
         <button
-          onClick={() => console.log('Play')}
+          onClick={isPlaying ? resumeAudio : startAudio}
           className="mt-6 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-700"
         >
           Play
@@ -186,8 +280,10 @@ const ControlPanel = () => {
             onChange={(e) => setToneType(e.target.value)}
             className="w-full p-2 border rounded"
           >
-            <option>Flute</option>
-            <option>Other</option>
+            <option>Sine</option>
+            <option>Square</option>
+            <option>Sawtooth</option>
+            <option>Triangle</option>
           </select>
         </div>
         <div className="mt-4">
@@ -217,10 +313,16 @@ const ControlPanel = () => {
           </SliderPrimitive.Root>
         </div>
         <div className="mt-4 flex space-x-4">
-          <button className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-700">
+          <button
+            onClick={pauseAudio}
+            className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-700"
+          >
             Pause
           </button>
-          <button className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-700">
+          <button
+            onClick={stopAudio}
+            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-700"
+          >
             Stop
           </button>
         </div>
