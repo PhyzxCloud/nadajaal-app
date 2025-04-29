@@ -58,7 +58,7 @@ const ControlPanel = () => {
       rightOscillatorRef.current.connect(rightPannerRef.current!);
       rightOscillatorRef.current.start();
 
-      // Initialize sketches when audio starts
+      // Initialize sketches only once when starting
       initializeSketches();
     }
     setIsPlaying(true);
@@ -84,7 +84,7 @@ const ControlPanel = () => {
       rightOscillatorRef.current.stop();
       leftOscillatorRef.current = null;
       rightOscillatorRef.current = null;
-      // Clean up sketches when audio stops
+      // Clean up sketches when stopping
       leftSketch?.remove();
       rightSketch?.remove();
       overlapSketch?.remove();
@@ -126,135 +126,141 @@ const ControlPanel = () => {
       const p5 = p5Module.default;
 
       // Left Frequency Waveform
-      const newLeftSketch = new p5((p: any) => {
-        p.setup = () => {
-          p.createCanvas(600, 150).parent(leftSketchRef.current!);
-          p.background(255);
-        };
-
-        p.draw = () => {
-          if (isPlaying) {
+      if (!leftSketch) {
+        const newLeftSketch = new p5((p: any) => {
+          p.setup = () => {
+            p.createCanvas(600, 150).parent(leftSketchRef.current!);
             p.background(255);
-            p.stroke(255, 99, 71); // Tomato red
-            p.strokeWeight(2);
-            p.noFill();
-            p.beginShape();
-            for (let x = 0; x < p.width; x++) {
-              let y = p.height / 2 + p.sin(p.frameCount * 0.01 + (x / 50) * (leftFreq / 100)) * (p.height / 4) * (volume / 100);
-              p.vertex(x, y);
+          };
+
+          p.draw = () => {
+            if (isPlaying) {
+              p.background(255);
+              p.stroke(255, 99, 71); // Tomato red
+              p.strokeWeight(2);
+              p.noFill();
+              p.beginShape();
+              for (let x = 0; x < p.width; x++) {
+                let y = p.height / 2 + p.sin(p.frameCount * 0.01 + (x / 50) * (leftFreq / 100)) * (p.height / 4) * (volume / 100);
+                p.vertex(x, y);
+              }
+              p.endShape();
             }
-            p.endShape();
-          }
-        };
-      });
+          };
+        });
+        setLeftSketch(newLeftSketch);
+      }
 
       // Right Frequency Waveform
-      const newRightSketch = new p5((p: any) => {
-        p.setup = () => {
-          p.createCanvas(600, 150).parent(rightSketchRef.current!);
-          p.background(255);
-        };
-
-        p.draw = () => {
-          if (isPlaying) {
+      if (!rightSketch) {
+        const newRightSketch = new p5((p: any) => {
+          p.setup = () => {
+            p.createCanvas(600, 150).parent(rightSketchRef.current!);
             p.background(255);
-            p.stroke(135, 206, 250); // Sky blue
-            p.strokeWeight(2);
-            p.noFill();
-            p.beginShape();
-            for (let x = 0; x < p.width; x++) {
-              let y = p.height / 2 + p.sin(p.frameCount * 0.01 + (x / 50) * (rightFreq / 100)) * (p.height / 4) * (volume / 100);
-              p.vertex(x, y);
+          };
+
+          p.draw = () => {
+            if (isPlaying) {
+              p.background(255);
+              p.stroke(135, 206, 250); // Sky blue
+              p.strokeWeight(2);
+              p.noFill();
+              p.beginShape();
+              for (let x = 0; x < p.width; x++) {
+                let y = p.height / 2 + p.sin(p.frameCount * 0.01 + (x / 50) * (rightFreq / 100)) * (p.height / 4) * (volume / 100);
+                p.vertex(x, y);
+              }
+              p.endShape();
             }
-            p.endShape();
-          }
-        };
-      });
+          };
+        });
+        setRightSketch(newRightSketch);
+      }
 
       // Overlap Waveform (Beat Frequency)
-      const newOverlapSketch = new p5((p: any) => {
-        p.setup = () => {
-          p.createCanvas(600, 150).parent(overlapSketchRef.current!);
-          p.background(255);
-        };
-
-        p.draw = () => {
-          if (isPlaying) {
+      if (!overlapSketch) {
+        const newOverlapSketch = new p5((p: any) => {
+          p.setup = () => {
+            p.createCanvas(600, 150).parent(overlapSketchRef.current!);
             p.background(255);
-            const beatFreq = Math.abs(leftFreq - rightFreq);
-            p.stroke(255, 215, 0); // Gold
-            p.strokeWeight(3);
-            p.noFill();
-            p.beginShape();
-            for (let x = 0; x < p.width; x++) {
-              let y = p.height / 2 + p.sin(p.frameCount * 0.01 + (x / 50) * (beatFreq / 100)) * (p.height / 4) * (volume / 100);
-              p.vertex(x, y);
+          };
+
+          p.draw = () => {
+            if (isPlaying) {
+              p.background(255);
+              const beatFreq = Math.abs(leftFreq - rightFreq);
+              p.stroke(255, 215, 0); // Gold
+              p.strokeWeight(3);
+              p.noFill();
+              p.beginShape();
+              for (let x = 0; x < p.width; x++) {
+                let y = p.height / 2 + p.sin(p.frameCount * 0.01 + (x / 50) * (beatFreq / 100)) * (p.height / 4) * (volume / 100);
+                p.vertex(x, y);
+              }
+              p.endShape();
             }
-            p.endShape();
-          }
-        };
-      });
+          };
+        });
+        setOverlapSketch(newOverlapSketch);
+      }
 
       // Mandelbrot Fractal
-      const newFractalSketch = new p5((p: any) => {
-        p.setup = () => {
-          p.createCanvas(600, 300).parent(fractalSketchRef.current!); // Increased height for better detail
-          p.pixelDensity(1);
-          p.colorMode(p.HSB);
-          p.noLoop(); // Render once, update on input
-        };
+      if (!fractalSketch) {
+        const newFractalSketch = new p5((p: any) => {
+          p.setup = () => {
+            p.createCanvas(600, 300).parent(fractalSketchRef.current!); // Increased height for detail
+            p.pixelDensity(1);
+            p.colorMode(p.HSB);
+          };
 
-        p.draw = () => {
-          if (isPlaying) {
-            p.loadPixels();
-            const maxIterations = 100;
-            const beatFreq = Math.abs(leftFreq - rightFreq);
-            const zoom = p.map(volume, 0, 100, 0.5, 2);
-            for (let x = 0; x < p.width; x++) {
-              for (let y = 0; y < p.height; y++) {
-                const a = p.map(x, 0, p.width, -2.5 / zoom, 1.5 / zoom);
-                const b = p.map(y, 0, p.height, -2 / zoom, 2 / zoom);
-                let ca = a;
-                let cb = b;
-                let n = 0;
-                let z = 0;
-                let zi = 0;
-                while (n < maxIterations && z * z + zi * zi < 4) {
-                  const newZ = z * z - zi * zi + ca;
-                  const newZi = 2 * z * zi + cb;
-                  z = newZ;
-                  zi = newZi;
-                  n++;
-                }
-                if (n === maxIterations) {
-                  p.pixels[y * p.width * 4 + x * 4 + 3] = 255; // Set alpha
-                } else {
-                  const hue = (n * 2.5 + beatFreq * 0.1) % 360;
-                  p.pixels[y * p.width * 4 + x * 4] = hue; // H
-                  p.pixels[y * p.width * 4 + x * 4 + 1] = 255; // S
-                  p.pixels[y * p.width * 4 + x * 4 + 2] = p.map(n, 0, maxIterations, 0, 255); // B
-                  p.pixels[y * p.width * 4 + x * 4 + 3] = 255; // A
+          p.draw = () => {
+            if (isPlaying) {
+              p.loadPixels();
+              const maxIterations = 100;
+              const beatFreq = Math.abs(leftFreq - rightFreq);
+              const zoom = p.map(volume, 0, 100, 0.5, 2);
+              for (let x = 0; x < p.width; x++) {
+                for (let y = 0; y < p.height; y++) {
+                  const a = p.map(x, 0, p.width, -2.5 / zoom, 1.5 / zoom);
+                  const b = p.map(y, 0, p.height, -2 / zoom, 2 / zoom);
+                  let ca = a;
+                  let cb = b;
+                  let n = 0;
+                  let z = 0;
+                  let zi = 0;
+                  while (n < maxIterations && z * z + zi * zi < 4) {
+                    const newZ = z * z - zi * zi + ca;
+                    const newZi = 2 * z * zi + cb;
+                    z = newZ;
+                    zi = newZi;
+                    n++;
+                  }
+                  if (n === maxIterations) {
+                    p.pixels[y * p.width * 4 + x * 4 + 3] = 255; // Set alpha
+                  } else {
+                    const hue = (n * 2.5 + beatFreq * 0.1) % 360;
+                    p.pixels[y * p.width * 4 + x * 4] = hue; // H
+                    p.pixels[y * p.width * 4 + x * 4 + 1] = 255; // S
+                    p.pixels[y * p.width * 4 + x * 4 + 2] = p.map(n, 0, maxIterations, 0, 255); // B
+                    p.pixels[y * p.width * 4 + x * 4 + 3] = 255; // A
+                  }
                 }
               }
+              p.updatePixels();
             }
-            p.updatePixels();
-          }
-        };
-      });
-
-      setLeftSketch(newLeftSketch);
-      setRightSketch(newRightSketch);
-      setOverlapSketch(newOverlapSketch);
-      setFractalSketch(newFractalSketch);
+          };
+        });
+        setFractalSketch(newFractalSketch);
+      }
     }).catch((err) => console.error('Failed to load p5:', err));
   };
 
-  // Re-initialize sketches when inputs change
+  // Re-initialize sketches only when starting or stopping
   React.useEffect(() => {
-    if (isPlaying) {
+    if (isPlaying && !leftSketch && !rightSketch && !overlapSketch && !fractalSketch) {
       initializeSketches();
     }
-  }, [leftFreq, rightFreq, volume, toneType, isPlaying]);
+  }, [isPlaying]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-100 to-indigo-100 p-6">
