@@ -10,9 +10,7 @@ export default function ControlPanel() {
   const [backgroundMusic, setBackgroundMusic] = useState<string>('none');
   const [volume, setVolume] = useState<number>(0.5);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const audioCtx = useRef<AudioContext>(
-    new (window.AudioContext || (window as any).webkitAudioContext)()
-  ).current;
+  const audioCtxRef = useRef<AudioContext | null>(null);
   const oscLeft = useRef<OscillatorNode | null>(null);
   const oscRight = useRef<OscillatorNode | null>(null);
   const gainNode = useRef<
@@ -24,6 +22,20 @@ export default function ControlPanel() {
     | { audio: HTMLAudioElement; gain: GainNode }
     | null
   >(null);
+
+  // Initialize AudioContext only on the client side
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+
+    // Cleanup on unmount
+    return () => {
+      if (audioCtxRef.current) {
+        audioCtxRef.current.close();
+      }
+    };
+  }, []);
 
   const backgroundTracks: { [key: string]: string | null } = {
     none: null,
@@ -85,6 +97,9 @@ export default function ControlPanel() {
   };
 
   const startAudio = async () => {
+    if (!audioCtxRef.current) return; // Ensure AudioContext exists
+
+    const audioCtx = audioCtxRef.current;
     await audioCtx.resume();
     const isMonaural = leftFreq === rightFreq;
     const binauralBeatFreq = Math.abs(leftFreq - rightFreq);
@@ -170,65 +185,60 @@ export default function ControlPanel() {
   };
 
   const updateAudio = () => {
-    if (isPlaying) {
-      if (oscLeft.current) oscLeft.current.frequency.setValueAtTime(leftFreq, audioCtx.currentTime);
-      if (oscRight.current) oscRight.current.frequency.setValueAtTime(rightFreq, audioCtx.currentTime);
-      if (gainNode.current) {
-        if ('gain' in gainNode.current) {
-          (gainNode.current as GainNode).gain.setValueAtTime(volume, audioCtx.currentTime);
-        } else {
-          const gainValue = Math.abs(leftFreq - rightFreq) <= 4 ? 0.4 : 0.5;
-          (gainNode.current as { gainL: GainNode; gainR: GainNode }).gainL.gain.setValueAtTime(volume * gainValue, audioCtx.currentTime);
-          (gainNode.current as { gainL: GainNode; gainR: GainNode }).gainR.gain.setValueAtTime(volume * gainValue, audioCtx.currentTime);
-        }
-      }
-      if (bgAudio.current) bgAudio.current.gain.gain.setValueAtTime(volume * 0.3, audioCtx.currentTime);
+    if (!audioCtxRef.current || !isPlaying) return; // Ensure AudioContext exists and audio is playing
 
-      if (backgroundMusic !== 'none') {
-        if (!bgAudio.current) {
-          const bgUrl = backgroundTracks[backgroundMusic];
-          if (bgUrl) {
-            const audio = new Audio(bgUrl);
-            audio.loop = true;
-            const source = audioCtx.createMediaElementSource(audio);
-            const gain = audioCtx.createGain();
-            gain.gain.setValueAtTime(volume * 0.3, audioCtx.currentTime);
-            source.connect(gain).connect(audioCtx.destination);
-            audio.play();
-            bgAudio.current = { audio, gain };
-          }
-        }
+    const audioCtx = audioCtxRef.current;
+    if (oscLeft.current) oscLeft.current.frequency.setValueAtTime(leftFreq, audioCtx.currentTime);
+    if (oscRight.current) oscRight.current.frequency.setValueAtTime(rightFreq, audioCtx.currentTime);
+    if (gainNode.current) {
+      if ('gain' in gainNode.current) {
+        (gainNode.current as GainNode).gain.setValueAtTime(volume, audioCtx.currentTime);
       } else {
-        if (bgAudio.current) {
-          bgAudio.current.audio.pause();
-          bgAudio.current.audio.currentTime = 0;
-          bgAudio.current = null;
-        }
+        const gainValue = Math.abs(leftFreq - rightFreq) <= 4 ? 0.4 : 0.5;
+        (gainNode.current as { gainL: GainNode; gainR: GainNode }).gainL.gain.setValueAtTime(volume * gainValue, audioCtx.currentTime);
+        (gainNode.current as { gainL: GainNode; gainR: GainNode }).gainR.gain.setValueAtTime(volume * gainValue, audioCtx.currentTime);
       }
+    }
+    if (bgAudio.current) bgAudio.current.gain.gain.setValueAtTime(volume * 0.3, audioCtx.currentTime);
 
-      const isMonaural = leftFreq === rightFreq;
-      const binauralBeatFreq = Math.abs(leftFreq - rightFreq);
-      const newWave = createInstrumentWave(toneType, audioCtx, isMonaural, binauralBeatFreq, leftFreq);
-      if (isMonaural) {
-        if (oscLeft.current) {
-          oscLeft.current.setPeriodicWave(newWave);
+    if (backgroundMusic !== 'none') {
+      if (!bgAudio.current) {
+        const bgUrl = backgroundTracks[backgroundMusic];
+        if (bgUrl) {
+          const audio = new Audio(bgUrl);
+          audio.loop = true;
+          const source = audioCtx.createMediaElementSource(audio);
+          const gain = audioCtx.createGain();
+          gain.gain.setValueAtTime(volume * 0.3, audioCtx.currentTime);
+          source.connect(gain).connect(audioCtx.destination);
+          audio.play();
+          bgAudio.current = { audio, gain };
         }
-      } else {
-        if (oscLeft.current) oscLeft.current.setPeriodicWave(newWave);
-        if (oscRight.current) oscRight.current.setPeriodicWave(newWave);
       }
+    } else {
+      if (bgAudio.current) {
+        bgAudio.current.audio.pause();
+        bgAudio.current.audio.currentTime = 0;
+        bgAudio.current = null;
+      }
+    }
+
+    const isMonaural = leftFreq === rightFreq;
+    const binauralBeatFreq = Math.abs(leftFreq - rightFreq);
+    const newWave = createInstrumentWave(toneType, audioCtx, isMonaural, binauralBeatFreq, leftFreq);
+    if (isMonaural) {
+      if (oscLeft.current) {
+        oscLeft.current.setPeriodicWave(newWave);
+      }
+    } else {
+      if (oscLeft.current) oscLeft.current.setPeriodicWave(newWave);
+      if (oscRight.current) oscRight.current.setPeriodicWave(newWave);
     }
   };
 
   useEffect(() => {
     updateAudio();
   }, [leftFreq, rightFreq, toneType, volume, backgroundMusic]);
-
-  useEffect(() => {
-    return () => {
-      audioCtx.close();
-    };
-  }, []);
 
   return (
     <>
