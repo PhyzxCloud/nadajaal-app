@@ -2,10 +2,6 @@
 
 import * as React from 'react';
 import * as SliderPrimitive from '@radix-ui/react-slider';
-import dynamic from 'next/dynamic';
-
-// Dynamically import p5.js to avoid SSR issues
-const p5 = dynamic(() => import('p5'), { ssr: false });
 
 const ControlPanel = () => {
   const [leftFreq, setLeftFreq] = React.useState(174);
@@ -15,6 +11,7 @@ const ControlPanel = () => {
   const [bgMusic, setBgMusic] = React.useState('None');
   const [volume, setVolume] = React.useState(50);
   const [isPlaying, setIsPlaying] = React.useState(false);
+  const [p5Loaded, setP5Loaded] = React.useState(false);
   const leftSketchRef = React.useRef<HTMLDivElement>(null);
   const rightSketchRef = React.useRef<HTMLDivElement>(null);
   const overlapSketchRef = React.useRef<HTMLDivElement>(null);
@@ -29,6 +26,35 @@ const ControlPanel = () => {
   const rightSketchRefInstance = React.useRef<p5 | null>(null);
   const overlapSketchRefInstance = React.useRef<p5 | null>(null);
   const mandalaSketchRefInstance = React.useRef<p5 | null>(null);
+
+  // Load p5.js script dynamically on the client side
+  React.useEffect(() => {
+    const loadP5Script = () => {
+      if (typeof window !== 'undefined' && !window.p5) {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js';
+        script.async = true;
+        script.onload = () => {
+          console.log('p5.js loaded successfully');
+          setP5Loaded(true);
+        };
+        script.onerror = () => {
+          console.error('Failed to load p5.js');
+        };
+        document.head.appendChild(script);
+      } else if (window.p5) {
+        setP5Loaded(true);
+      }
+    };
+
+    loadP5Script();
+
+    return () => {
+      // Cleanup: Remove script if necessary (optional)
+      const scripts = document.querySelectorAll('script[src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js"]');
+      scripts.forEach(script => script.remove());
+    };
+  }, []);
 
   // Sync base frequency with left and right frequencies
   React.useEffect(() => {
@@ -129,8 +155,13 @@ const ControlPanel = () => {
     }
   }, [toneType]);
 
-  // Initialize p5.js sketches after DOM is ready
+  // Initialize p5.js sketches after p5 is loaded and DOM is ready
   React.useEffect(() => {
+    if (!p5Loaded || !window.p5) {
+      console.log('p5.js not loaded yet');
+      return;
+    }
+
     if (!leftSketchRef.current || !rightSketchRef.current || !overlapSketchRef.current || !mandalaSketchRef.current) {
       console.error('One or more refs not ready');
       return;
@@ -160,7 +191,7 @@ const ControlPanel = () => {
             }
           };
         };
-        leftSketchRefInstance.current = new p5(sketch);
+        leftSketchRefInstance.current = new window.p5(sketch);
       }
 
       // Right Frequency Waveform (Simplified for debugging)
@@ -184,7 +215,7 @@ const ControlPanel = () => {
             }
           };
         };
-        rightSketchRefInstance.current = new p5(sketch);
+        rightSketchRefInstance.current = new window.p5(sketch);
       }
 
       // Overlap Waveform (Simplified for debugging)
@@ -208,7 +239,7 @@ const ControlPanel = () => {
             }
           };
         };
-        overlapSketchRefInstance.current = new p5(sketch);
+        overlapSketchRefInstance.current = new window.p5(sketch);
       }
 
       // Sacred Geometry Mandala (Simplified for debugging)
@@ -232,7 +263,7 @@ const ControlPanel = () => {
             }
           };
         };
-        mandalaSketchRefInstance.current = new p5(sketch);
+        mandalaSketchRefInstance.current = new window.p5(sketch);
       }
     };
 
@@ -249,7 +280,7 @@ const ControlPanel = () => {
       overlapSketchRefInstance.current = null;
       mandalaSketchRefInstance.current = null;
     };
-  }, []);
+  }, [p5Loaded, isPlaying]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-100 to-indigo-100 p-6">
