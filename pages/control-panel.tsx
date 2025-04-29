@@ -2,7 +2,10 @@
 
 import * as React from 'react';
 import * as SliderPrimitive from '@radix-ui/react-slider';
-import p5 from 'p5'; // Static import for p5.js
+import dynamic from 'next/dynamic';
+
+// Dynamically import p5.js to avoid SSR issues
+const p5 = dynamic(() => import('p5'), { ssr: false });
 
 const ControlPanel = () => {
   const [leftFreq, setLeftFreq] = React.useState(174);
