@@ -45,7 +45,7 @@ const ControlPanel = () => {
 
   const startAudio = () => {
     setupAudio();
-    if (audioContextRef.current && !leftOscillatorRef.current && !rightOscillatorRef.current) {
+    if (audioContextRef.current && !leftOscillatorRef.current && !rightOscillatorRef.current && !isPlaying) {
       leftOscillatorRef.current = audioContextRef.current.createOscillator();
       leftOscillatorRef.current.type = toneType.toLowerCase() as OscillatorType;
       leftOscillatorRef.current.frequency.setValueAtTime(leftFreq, audioContextRef.current.currentTime);
@@ -57,6 +57,9 @@ const ControlPanel = () => {
       rightOscillatorRef.current.frequency.setValueAtTime(rightFreq, audioContextRef.current.currentTime);
       rightOscillatorRef.current.connect(rightPannerRef.current!);
       rightOscillatorRef.current.start();
+
+      // Initialize sketches when audio starts
+      initializeSketches();
     }
     setIsPlaying(true);
   };
@@ -81,6 +84,15 @@ const ControlPanel = () => {
       rightOscillatorRef.current.stop();
       leftOscillatorRef.current = null;
       rightOscillatorRef.current = null;
+      // Clean up sketches when audio stops
+      leftSketch?.remove();
+      rightSketch?.remove();
+      overlapSketch?.remove();
+      fractalSketch?.remove();
+      setLeftSketch(null);
+      setRightSketch(null);
+      setOverlapSketch(null);
+      setFractalSketch(null);
     }
     setIsPlaying(false);
   };
@@ -108,99 +120,124 @@ const ControlPanel = () => {
     }
   }, [toneType]);
 
-  // Set up p5.js sketches
-  React.useEffect(() => {
-    let newLeftSketch: any, newRightSketch: any, newOverlapSketch: any, newFractalSketch: any;
-
+  // Initialize p5.js sketches
+  const initializeSketches = () => {
     import('p5').then((p5Module) => {
       const p5 = p5Module.default;
 
       // Left Frequency Waveform
-      newLeftSketch = new p5((p: any) => {
+      const newLeftSketch = new p5((p: any) => {
         p.setup = () => {
           p.createCanvas(600, 150).parent(leftSketchRef.current!);
           p.background(255);
         };
 
         p.draw = () => {
-          p.background(255);
-          p.stroke(255, 99, 71); // Tomato red
-          p.strokeWeight(2);
-          p.noFill();
-          p.beginShape();
-          for (let x = 0; x < p.width; x++) {
-            let y = p.height / 2 + p.sin(p.frameCount * 0.01 + (x / 50) * (leftFreq / 100)) * (p.height / 4);
-            p.vertex(x, y);
+          if (isPlaying) {
+            p.background(255);
+            p.stroke(255, 99, 71); // Tomato red
+            p.strokeWeight(2);
+            p.noFill();
+            p.beginShape();
+            for (let x = 0; x < p.width; x++) {
+              let y = p.height / 2 + p.sin(p.frameCount * 0.01 + (x / 50) * (leftFreq / 100)) * (p.height / 4) * (volume / 100);
+              p.vertex(x, y);
+            }
+            p.endShape();
           }
-          p.endShape();
         };
       });
 
       // Right Frequency Waveform
-      newRightSketch = new p5((p: any) => {
+      const newRightSketch = new p5((p: any) => {
         p.setup = () => {
           p.createCanvas(600, 150).parent(rightSketchRef.current!);
           p.background(255);
         };
 
         p.draw = () => {
-          p.background(255);
-          p.stroke(135, 206, 250); // Sky blue
-          p.strokeWeight(2);
-          p.noFill();
-          p.beginShape();
-          for (let x = 0; x < p.width; x++) {
-            let y = p.height / 2 + p.sin(p.frameCount * 0.01 + (x / 50) * (rightFreq / 100)) * (p.height / 4);
-            p.vertex(x, y);
+          if (isPlaying) {
+            p.background(255);
+            p.stroke(135, 206, 250); // Sky blue
+            p.strokeWeight(2);
+            p.noFill();
+            p.beginShape();
+            for (let x = 0; x < p.width; x++) {
+              let y = p.height / 2 + p.sin(p.frameCount * 0.01 + (x / 50) * (rightFreq / 100)) * (p.height / 4) * (volume / 100);
+              p.vertex(x, y);
+            }
+            p.endShape();
           }
-          p.endShape();
         };
       });
 
       // Overlap Waveform (Beat Frequency)
-      newOverlapSketch = new p5((p: any) => {
+      const newOverlapSketch = new p5((p: any) => {
         p.setup = () => {
           p.createCanvas(600, 150).parent(overlapSketchRef.current!);
           p.background(255);
         };
 
         p.draw = () => {
-          p.background(255);
-          const beatFreq = Math.abs(leftFreq - rightFreq);
-          p.stroke(255, 215, 0); // Gold for beat frequency
-          p.strokeWeight(3);
-          p.noFill();
-          p.beginShape();
-          for (let x = 0; x < p.width; x++) {
-            let y = p.height / 2 + p.sin(p.frameCount * 0.01 + (x / 50) * (beatFreq / 100)) * (p.height / 4) * (volume / 50);
-            p.vertex(x, y);
+          if (isPlaying) {
+            p.background(255);
+            const beatFreq = Math.abs(leftFreq - rightFreq);
+            p.stroke(255, 215, 0); // Gold
+            p.strokeWeight(3);
+            p.noFill();
+            p.beginShape();
+            for (let x = 0; x < p.width; x++) {
+              let y = p.height / 2 + p.sin(p.frameCount * 0.01 + (x / 50) * (beatFreq / 100)) * (p.height / 4) * (volume / 100);
+              p.vertex(x, y);
+            }
+            p.endShape();
           }
-          p.endShape();
         };
       });
 
-      // Spiraling Fractals
-      newFractalSketch = new p5((p: any) => {
+      // Mandelbrot Fractal
+      const newFractalSketch = new p5((p: any) => {
         p.setup = () => {
-          p.createCanvas(600, 150).parent(fractalSketchRef.current!);
-          p.background(255);
+          p.createCanvas(600, 300).parent(fractalSketchRef.current!); // Increased height for better detail
+          p.pixelDensity(1);
           p.colorMode(p.HSB);
+          p.noLoop(); // Render once, update on input
         };
 
         p.draw = () => {
-          p.background(255, 10); // Slight transparency for trail
-          p.translate(p.width / 2, p.height / 2);
-          const beatFreq = Math.abs(leftFreq - rightFreq);
-          const radius = p.map(beatFreq, 0, 100, 50, 150);
-          const steps = p.map(volume, 0, 100, 5, 20);
-          for (let i = 0; i < steps; i++) {
-            let angle = p.frameCount * 0.05 + (i * p.TWO_PI) / steps;
-            let r = radius * (1 + p.sin(p.frameCount * 0.01 + i));
-            let x = r * p.cos(angle);
-            let y = r * p.sin(angle);
-            p.stroke((p.frameCount + i * 10) % 360, 80, 80);
-            p.strokeWeight(2);
-            p.point(x, y);
+          if (isPlaying) {
+            p.loadPixels();
+            const maxIterations = 100;
+            const beatFreq = Math.abs(leftFreq - rightFreq);
+            const zoom = p.map(volume, 0, 100, 0.5, 2);
+            for (let x = 0; x < p.width; x++) {
+              for (let y = 0; y < p.height; y++) {
+                const a = p.map(x, 0, p.width, -2.5 / zoom, 1.5 / zoom);
+                const b = p.map(y, 0, p.height, -2 / zoom, 2 / zoom);
+                let ca = a;
+                let cb = b;
+                let n = 0;
+                let z = 0;
+                let zi = 0;
+                while (n < maxIterations && z * z + zi * zi < 4) {
+                  const newZ = z * z - zi * zi + ca;
+                  const newZi = 2 * z * zi + cb;
+                  z = newZ;
+                  zi = newZi;
+                  n++;
+                }
+                if (n === maxIterations) {
+                  p.pixels[y * p.width * 4 + x * 4 + 3] = 255; // Set alpha
+                } else {
+                  const hue = (n * 2.5 + beatFreq * 0.1) % 360;
+                  p.pixels[y * p.width * 4 + x * 4] = hue; // H
+                  p.pixels[y * p.width * 4 + x * 4 + 1] = 255; // S
+                  p.pixels[y * p.width * 4 + x * 4 + 2] = p.map(n, 0, maxIterations, 0, 255); // B
+                  p.pixels[y * p.width * 4 + x * 4 + 3] = 255; // A
+                }
+              }
+            }
+            p.updatePixels();
           }
         };
       });
@@ -210,15 +247,14 @@ const ControlPanel = () => {
       setOverlapSketch(newOverlapSketch);
       setFractalSketch(newFractalSketch);
     }).catch((err) => console.error('Failed to load p5:', err));
+  };
 
-    return () => {
-      leftSketch?.remove();
-      rightSketch?.remove();
-      overlapSketch?.remove();
-      fractalSketch?.remove();
-      stopAudio();
-    };
-  }, []);
+  // Re-initialize sketches when inputs change
+  React.useEffect(() => {
+    if (isPlaying) {
+      initializeSketches();
+    }
+  }, [leftFreq, rightFreq, volume, toneType, isPlaying]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-100 to-indigo-100 p-6">
@@ -238,7 +274,7 @@ const ControlPanel = () => {
             <div ref={overlapSketchRef} className="border-2 border-gray-200 rounded-lg overflow-hidden"></div>
           </div>
           <div className="p-4 bg-gray-50 rounded-lg shadow-inner">
-            <label className="block font-semibold text-sm text-gray-700">Spiraling Fractals</label>
+            <label className="block font-semibold text-sm text-gray-700">Mandelbrot Fractal</label>
             <div ref={fractalSketchRef} className="border-2 border-gray-200 rounded-lg overflow-hidden"></div>
           </div>
         </div>
