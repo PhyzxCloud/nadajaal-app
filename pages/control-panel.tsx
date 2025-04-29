@@ -23,13 +23,11 @@ export default function ControlPanel() {
     | null
   >(null);
 
-  // Initialize AudioContext only on the client side
   useEffect(() => {
     if (typeof window !== 'undefined') {
       audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
 
-    // Cleanup on unmount
     return () => {
       if (audioCtxRef.current) {
         audioCtxRef.current.close();
@@ -97,7 +95,7 @@ export default function ControlPanel() {
   };
 
   const startAudio = async () => {
-    if (!audioCtxRef.current) return; // Ensure AudioContext exists
+    if (!audioCtxRef.current) return;
 
     const audioCtx = audioCtxRef.current;
     await audioCtx.resume();
@@ -150,7 +148,6 @@ export default function ControlPanel() {
       gainNode.current = { gainL, gainR };
     }
 
-    // Only initialize background audio if a valid URL exists
     const bgUrl = backgroundTracks[backgroundMusic];
     if (bgUrl && !bgAudio.current) {
       const audio = new Audio(bgUrl);
@@ -185,7 +182,7 @@ export default function ControlPanel() {
   };
 
   const updateAudio = () => {
-    if (!audioCtxRef.current || !isPlaying) return; // Ensure AudioContext exists and audio is playing
+    if (!audioCtxRef.current || !isPlaying) return;
 
     const audioCtx = audioCtxRef.current;
     if (oscLeft.current) oscLeft.current.frequency.setValueAtTime(leftFreq, audioCtx.currentTime);
@@ -245,35 +242,35 @@ export default function ControlPanel() {
       <Head>
         <title>Nādajaal Control Panel</title>
       </Head>
-      <div className="min-h-screen bg-gray-50 text-gray-900 p-6 font-serif" style={{ fontFamily: "'EB Garamond', serif" }}>
-        <div className="mb-6">
-          <div className="h-48 bg-gray-200 rounded-lg flex items-center justify-center text-gray-600">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-100 to-purple-100 text-gray-900 p-6 font-serif" style={{ fontFamily: "'EB Garamond', serif" }}>
+        <div className="mb-8">
+          <div className="h-64 bg-white rounded-lg shadow-lg flex items-center justify-center text-gray-600 border border-gray-200">
             Geometry & Waveform Visualizations
           </div>
         </div>
-        <Button onClick={startAudio} className="bg-green-600 hover:bg-green-700 text-white p-2 rounded-lg shadow-md mb-4 transition-colors" disabled={isPlaying}>
+        <Button onClick={startAudio} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow-md mb-6 transition-colors" disabled={isPlaying}>
           Play
         </Button>
-        <div className="space-y-6">
+        <div className="space-y-8">
           <div>
-            <label className="block text-sm text-gray-600">Left Frequency: {leftFreq} Hz</label>
+            <label className="block text-lg font-medium text-gray-700">Left Frequency: {leftFreq} Hz</label>
             <Slider value={[leftFreq]} onValueChange={([v]) => setLeftFreq(v)} min={1} max={2000} className="mt-2" />
           </div>
           <div>
-            <label className="block text-sm text-gray-600">Right Frequency: {rightFreq} Hz</label>
+            <label className="block text-lg font-medium text-gray-700">Right Frequency: {rightFreq} Hz</label>
             <Slider value={[rightFreq]} onValueChange={([v]) => setRightFreq(v)} min={1} max={2000} className="mt-2" />
           </div>
           <div>
-            <label className="block text-sm text-gray-600">Tone Type</label>
-            <select value={toneType} onChange={(e) => setToneType(e.target.value)} className="w-full p-2 bg-white rounded border border-gray-300 mt-2">
+            <label className="block text-lg font-medium text-gray-700">Tone Type</label>
+            <select value={toneType} onChange={(e) => setToneType(e.target.value)} className="w-full p-2 mt-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
               <option value="flute">Flute</option>
               <option value="violin">Violin</option>
               <option value="cello">Cello</option>
             </select>
           </div>
           <div>
-            <label className="block text-sm text-gray-600">Background Music</label>
-            <select value={backgroundMusic} onChange={(e) => setBackgroundMusic(e.target.value)} className="w-full p-2 bg-white rounded border border-gray-300 mt-2">
+            <label className="block text-lg font-medium text-gray-700">Background Music</label>
+            <select value={backgroundMusic} onChange={(e) => setBackgroundMusic(e.target.value)} className="w-full p-2 mt-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
               <option value="none">None</option>
               <option value="nature">Nature</option>
               <option value="piano">Piano</option>
@@ -281,14 +278,14 @@ export default function ControlPanel() {
             </select>
           </div>
           <div>
-            <label className="block text-sm text-gray-600">Volume: {(volume * 100).toFixed(0)}%</label>
+            <label className="block text-lg font-medium text-gray-700">Volume: {(volume * 100).toFixed(0)}%</label>
             <Slider value={[volume]} onValueChange={([v]) => setVolume(v)} min={0} max={1} step={0.1} className="mt-2" />
           </div>
-          <div className="flex space-x-4">
-            <Button onClick={pauseAudio} className="bg-yellow-600 hover:bg-yellow-700 text-white p-2 rounded-lg shadow-md transition-colors" disabled={!isPlaying}>
+          <div className="flex space-x-6">
+            <Button onClick={pauseAudio} className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg shadow-md transition-colors" disabled={!isPlaying}>
               Pause
             </Button>
-            <Button onClick={stopAudio} className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg shadow-md transition-colors" disabled={!isPlaying}>
+            <Button onClick={stopAudio} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg shadow-md transition-colors" disabled={!isPlaying}>
               Stop
             </Button>
           </div>
