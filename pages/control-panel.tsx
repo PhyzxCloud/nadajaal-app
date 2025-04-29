@@ -4,9 +4,9 @@ import * as React from 'react';
 import * as SliderPrimitive from '@radix-ui/react-slider';
 
 const ControlPanel = () => {
-  const [leftFreq, setLeftFreq] = React.useState(200);
-  const [rightFreq, setRightFreq] = React.useState(210);
-  const [baseFreq, setBaseFreq] = React.useState(0); // Adjusted to start at 0
+  const [leftFreq, setLeftFreq] = React.useState(174); // Initialized to 174 Hz
+  const [rightFreq, setRightFreq] = React.useState(174); // Initialized to 174 Hz
+  const [baseFreq, setBaseFreq] = React.useState(174); // Initialized to 174 Hz
   const [toneType, setToneType] = React.useState('Sine');
   const [bgMusic, setBgMusic] = React.useState('None');
   const [volume, setVolume] = React.useState(50);
@@ -132,13 +132,19 @@ const ControlPanel = () => {
   const initializeSketches = () => {
     import('p5').then((p5Module) => {
       const p5 = p5Module.default;
+      console.log('p5.js loaded successfully'); // Debug log
 
       // Left Frequency Waveform
       if (!leftSketchRefInstance.current) {
         const newLeftSketch = new p5((p: any) => {
           p.setup = () => {
-            p.createCanvas(600, 150).parent(leftSketchRef.current!);
-            p.background(255);
+            if (leftSketchRef.current) {
+              p.createCanvas(600, 150).parent(leftSketchRef.current);
+              p.background(255);
+              console.log('Left sketch setup'); // Debug log
+            } else {
+              console.error('Left sketch ref not found');
+            }
           };
 
           p.draw = () => {
@@ -153,6 +159,7 @@ const ControlPanel = () => {
                 p.vertex(x, y);
               }
               p.endShape();
+              console.log('Left sketch drawing, leftFreq:', leftFreq); // Debug log
             } else {
               p.background(255); // Clear canvas when not playing
             }
@@ -165,8 +172,13 @@ const ControlPanel = () => {
       if (!rightSketchRefInstance.current) {
         const newRightSketch = new p5((p: any) => {
           p.setup = () => {
-            p.createCanvas(600, 150).parent(rightSketchRef.current!);
-            p.background(255);
+            if (rightSketchRef.current) {
+              p.createCanvas(600, 150).parent(rightSketchRef.current);
+              p.background(255);
+              console.log('Right sketch setup'); // Debug log
+            } else {
+              console.error('Right sketch ref not found');
+            }
           };
 
           p.draw = () => {
@@ -181,6 +193,7 @@ const ControlPanel = () => {
                 p.vertex(x, y);
               }
               p.endShape();
+              console.log('Right sketch drawing, rightFreq:', rightFreq); // Debug log
             } else {
               p.background(255); // Clear canvas when not playing
             }
@@ -193,8 +206,13 @@ const ControlPanel = () => {
       if (!overlapSketchRefInstance.current) {
         const newOverlapSketch = new p5((p: any) => {
           p.setup = () => {
-            p.createCanvas(600, 150).parent(overlapSketchRef.current!);
-            p.background(255);
+            if (overlapSketchRef.current) {
+              p.createCanvas(600, 150).parent(overlapSketchRef.current);
+              p.background(255);
+              console.log('Overlap sketch setup'); // Debug log
+            } else {
+              console.error('Overlap sketch ref not found');
+            }
           };
 
           p.draw = () => {
@@ -210,6 +228,7 @@ const ControlPanel = () => {
                 p.vertex(x, y);
               }
               p.endShape();
+              console.log('Overlap sketch drawing, beatFreq:', beatFreq); // Debug log
             } else {
               p.background(255); // Clear canvas when not playing
             }
@@ -222,9 +241,14 @@ const ControlPanel = () => {
       if (!mandalaSketchRefInstance.current) {
         const newMandalaSketch = new p5((p: any) => {
           p.setup = () => {
-            p.createCanvas(600, 300).parent(mandalaSketchRef.current!);
-            p.angleMode(p.DEGREES);
-            p.colorMode(p.HSB);
+            if (mandalaSketchRef.current) {
+              p.createCanvas(600, 300).parent(mandalaSketchRef.current);
+              p.angleMode(p.DEGREES);
+              p.colorMode(p.HSB);
+              console.log('Mandala sketch setup'); // Debug log
+            } else {
+              console.error('Mandala sketch ref not found');
+            }
           };
 
           p.draw = () => {
@@ -248,6 +272,7 @@ const ControlPanel = () => {
                 }
                 p.endShape(p.CLOSE);
               }
+              console.log('Mandala sketch drawing, beatFreq:', beatFreq, 'volume:', volume); // Debug log
             } else {
               p.background(255); // Clear canvas when not playing
             }
@@ -291,7 +316,7 @@ const ControlPanel = () => {
           <SliderPrimitive.Root
             value={[baseFreq]}
             onValueChange={(value) => setBaseFreq(value[0])}
-            min={0} // Adjusted to start at 0
+            min={0}
             max={1000}
             step={1}
             className="relative flex items-center w-full mt-2"
@@ -332,7 +357,7 @@ const ControlPanel = () => {
             <SliderPrimitive.Thumb className="block w-5 h-5 bg-blue-500 rounded-full focus:outline-none shadow" />
           </SliderPrimitive.Root>
         </div>
-        <div className="mt-4">
+        <div className "mt-4">
           <label className="block text-gray-700">Tone Type</label>
           <select
             value={toneType}
