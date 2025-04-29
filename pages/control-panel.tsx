@@ -22,11 +22,12 @@ const ControlPanel = () => {
   const leftPannerRef = React.useRef<StereoPannerNode | null>(null);
   const rightPannerRef = React.useRef<StereoPannerNode | null>(null);
   const gainNodeRef = React.useRef<GainNode | null>(null);
-  // Use 'any' temporarily since p5 type might not be available until loaded
   const leftSketchRefInstance = React.useRef<any>(null);
   const rightSketchRefInstance = React.useRef<any>(null);
   const overlapSketchRefInstance = React.useRef<any>(null);
   const mandalaSketchRefInstance = React.useRef<any>(null);
+  // Ref to store current frequencies for p5 sketches
+  const freqRef = React.useRef({ leftFreq: 174, rightFreq: 174 });
 
   // Load p5.js script dynamically on the client side
   React.useEffect(() => {
@@ -51,7 +52,6 @@ const ControlPanel = () => {
     loadP5Script();
 
     return () => {
-      // Cleanup: Remove script if necessary (optional)
       const scripts = document.querySelectorAll('script[src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js"]');
       scripts.forEach(script => script.remove());
     };
@@ -63,6 +63,11 @@ const ControlPanel = () => {
     setLeftFreq(baseFreq);
     setRightFreq(baseFreq + diff);
   }, [baseFreq]);
+
+  // Update freqRef when frequencies change
+  React.useEffect(() => {
+    freqRef.current = { leftFreq, rightFreq };
+  }, [leftFreq, rightFreq]);
 
   // Initialize AudioContext and Oscillators
   const setupAudio = () => {
@@ -120,7 +125,6 @@ const ControlPanel = () => {
       rightOscillatorRef.current.stop();
       leftOscillatorRef.current = null;
       rightOscillatorRef.current = null;
-      // Clean up sketches
       leftSketchRefInstance.current?.remove();
       rightSketchRefInstance.current?.remove();
       overlapSketchRefInstance.current?.remove();
@@ -171,9 +175,9 @@ const ControlPanel = () => {
     const initializeSketches = () => {
       console.log('Initializing sketches');
 
-      // Left Frequency Waveform (Simplified for debugging)
+      // Left Frequency Waveform
       if (!leftSketchRefInstance.current) {
-        const sketch = (p: any) => { // Use 'any' until p5 type is confirmed
+        const sketch = (p: any) => {
           p.setup = () => {
             p.createCanvas(600, 150).parent(leftSketchRef.current!);
             p.background(255);
@@ -185,8 +189,12 @@ const ControlPanel = () => {
               p.background(255);
               p.stroke(255, 99, 71); // Tomato red
               p.strokeWeight(2);
-              p.line(0, p.height / 2, p.width, p.height / 2); // Simple line for debugging
-              console.log('Left sketch drawing, leftFreq:', leftFreq);
+              // Simple sine wave based on leftFreq
+              for (let x = 0; x < p.width; x++) {
+                let y = p.height / 2 + p.sin(x * 0.1 + p.frameCount * 0.05) * 50 * (freqRef.current.leftFreq / 174);
+                p.point(x, y);
+              }
+              console.log('Left sketch drawing, leftFreq:', freqRef.current.leftFreq);
             } else {
               p.background(255);
             }
@@ -195,7 +203,7 @@ const ControlPanel = () => {
         leftSketchRefInstance.current = new window.p5(sketch);
       }
 
-      // Right Frequency Waveform (Simplified for debugging)
+      // Right Frequency Waveform
       if (!rightSketchRefInstance.current) {
         const sketch = (p: any) => {
           p.setup = () => {
@@ -209,8 +217,12 @@ const ControlPanel = () => {
               p.background(255);
               p.stroke(135, 206, 250); // Sky blue
               p.strokeWeight(2);
-              p.line(0, p.height / 2, p.width, p.height / 2); // Simple line for debugging
-              console.log('Right sketch drawing, rightFreq:', rightFreq);
+              // Simple sine wave based on rightFreq
+              for (let x = 0; x < p.width; x++) {
+                let y = p.height / 2 + p.sin(x * 0.1 + p.frameCount * 0.05) * 50 * (freqRef.current.rightFreq / 174);
+                p.point(x, y);
+              }
+              console.log('Right sketch drawing, rightFreq:', freqRef.current.rightFreq);
             } else {
               p.background(255);
             }
@@ -219,7 +231,7 @@ const ControlPanel = () => {
         rightSketchRefInstance.current = new window.p5(sketch);
       }
 
-      // Overlap Waveform (Simplified for debugging)
+      // Overlap (Beat Frequency) Waveform
       if (!overlapSketchRefInstance.current) {
         const sketch = (p: any) => {
           p.setup = () => {
@@ -233,8 +245,13 @@ const ControlPanel = () => {
               p.background(255);
               p.stroke(255, 215, 0); // Gold
               p.strokeWeight(3);
-              p.line(0, p.height / 2, p.width, p.height / 2); // Simple line for debugging
-              console.log('Overlap sketch drawing, beatFreq:', Math.abs(leftFreq - rightFreq));
+              const beatFreq = Math.abs(freqRef.current.rightFreq - freqRef.current.leftFreq);
+              // Simple beat frequency visualization
+              for (let x = 0; x < p.width; x++) {
+                let y = p.height / 2 + p.sin(x * 0.1 + p.frameCount * 0.05 * (beatFreq / 10)) * 50;
+                p.point(x, y);
+              }
+              console.log('Overlap sketch drawing, beatFreq:', beatFreq);
             } else {
               p.background(255);
             }
@@ -243,7 +260,7 @@ const ControlPanel = () => {
         overlapSketchRefInstance.current = new window.p5(sketch);
       }
 
-      // Sacred Geometry Mandala (Simplified for debugging)
+      // Sacred Geometry Mandala
       if (!mandalaSketchRefInstance.current) {
         const sketch = (p: any) => {
           p.setup = () => {
@@ -257,7 +274,8 @@ const ControlPanel = () => {
               p.background(255);
               p.stroke(0);
               p.strokeWeight(2);
-              p.ellipse(p.width / 2, p.height / 2, 100, 100); // Simple circle for debugging
+              const radius = 100 + Math.sin(p.frameCount * 0.05) * 20; // Dynamic radius based on time
+              p.ellipse(p.width / 2, p.height / 2, radius, radius);
               console.log('Mandala sketch drawing');
             } else {
               p.background(255);
@@ -271,7 +289,6 @@ const ControlPanel = () => {
     initializeSketches();
 
     return () => {
-      // Cleanup on unmount
       leftSketchRefInstance.current?.remove();
       rightSketchRefInstance.current?.remove();
       overlapSketchRefInstance.current?.remove();
