@@ -2,11 +2,12 @@
 
 import * as React from 'react';
 import * as SliderPrimitive from '@radix-ui/react-slider';
+import p5 from 'p5'; // Static import for p5.js
 
 const ControlPanel = () => {
-  const [leftFreq, setLeftFreq] = React.useState(174); // Initialized to 174 Hz
-  const [rightFreq, setRightFreq] = React.useState(174); // Initialized to 174 Hz
-  const [baseFreq, setBaseFreq] = React.useState(174); // Initialized to 174 Hz
+  const [leftFreq, setLeftFreq] = React.useState(174);
+  const [rightFreq, setRightFreq] = React.useState(174);
+  const [baseFreq, setBaseFreq] = React.useState(174);
   const [toneType, setToneType] = React.useState('Sine');
   const [bgMusic, setBgMusic] = React.useState('None');
   const [volume, setVolume] = React.useState(50);
@@ -21,10 +22,10 @@ const ControlPanel = () => {
   const leftPannerRef = React.useRef<StereoPannerNode | null>(null);
   const rightPannerRef = React.useRef<StereoPannerNode | null>(null);
   const gainNodeRef = React.useRef<GainNode | null>(null);
-  const leftSketchRefInstance = React.useRef<any>(null);
-  const rightSketchRefInstance = React.useRef<any>(null);
-  const overlapSketchRefInstance = React.useRef<any>(null);
-  const mandalaSketchRefInstance = React.useRef<any>(null);
+  const leftSketchRefInstance = React.useRef<p5 | null>(null);
+  const rightSketchRefInstance = React.useRef<p5 | null>(null);
+  const overlapSketchRefInstance = React.useRef<p5 | null>(null);
+  const mandalaSketchRefInstance = React.useRef<p5 | null>(null);
 
   // Sync base frequency with left and right frequencies
   React.useEffect(() => {
@@ -65,9 +66,6 @@ const ControlPanel = () => {
       rightOscillatorRef.current.frequency.setValueAtTime(rightFreq, audioContextRef.current.currentTime);
       rightOscillatorRef.current.connect(rightPannerRef.current!);
       rightOscillatorRef.current.start();
-
-      // Initialize sketches if not already initialized
-      if (!leftSketchRefInstance.current) initializeSketches();
     }
     setIsPlaying(true);
   };
@@ -128,23 +126,23 @@ const ControlPanel = () => {
     }
   }, [toneType]);
 
-  // Initialize p5.js sketches
-  const initializeSketches = () => {
-    import('p5').then((p5Module) => {
-      const p5 = p5Module.default;
-      console.log('p5.js loaded successfully'); // Debug log
+  // Initialize p5.js sketches after DOM is ready
+  React.useEffect(() => {
+    if (!leftSketchRef.current || !rightSketchRef.current || !overlapSketchRef.current || !mandalaSketchRef.current) {
+      console.error('One or more refs not ready');
+      return;
+    }
 
-      // Left Frequency Waveform
+    const initializeSketches = () => {
+      console.log('Initializing sketches');
+
+      // Left Frequency Waveform (Simplified for debugging)
       if (!leftSketchRefInstance.current) {
-        const newLeftSketch = new p5((p: any) => {
+        const sketch = (p: p5) => {
           p.setup = () => {
-            if (leftSketchRef.current) {
-              p.createCanvas(600, 150).parent(leftSketchRef.current);
-              p.background(255);
-              console.log('Left sketch setup'); // Debug log
-            } else {
-              console.error('Left sketch ref not found');
-            }
+            p.createCanvas(600, 150).parent(leftSketchRef.current!);
+            p.background(255);
+            console.log('Left sketch setup');
           };
 
           p.draw = () => {
@@ -152,33 +150,23 @@ const ControlPanel = () => {
               p.background(255);
               p.stroke(255, 99, 71); // Tomato red
               p.strokeWeight(2);
-              p.noFill();
-              p.beginShape();
-              for (let x = 0; x < p.width; x++) {
-                let y = p.height / 2 + p.sin(p.frameCount * 0.05 + (x / 50) * (leftFreq / 100)) * (p.height / 4) * (volume / 100);
-                p.vertex(x, y);
-              }
-              p.endShape();
-              console.log('Left sketch drawing, leftFreq:', leftFreq); // Debug log
+              p.line(0, p.height / 2, p.width, p.height / 2); // Simple line for debugging
+              console.log('Left sketch drawing, leftFreq:', leftFreq);
             } else {
-              p.background(255); // Clear canvas when not playing
+              p.background(255);
             }
           };
-        });
-        leftSketchRefInstance.current = newLeftSketch;
+        };
+        leftSketchRefInstance.current = new p5(sketch);
       }
 
-      // Right Frequency Waveform
+      // Right Frequency Waveform (Simplified for debugging)
       if (!rightSketchRefInstance.current) {
-        const newRightSketch = new p5((p: any) => {
+        const sketch = (p: p5) => {
           p.setup = () => {
-            if (rightSketchRef.current) {
-              p.createCanvas(600, 150).parent(rightSketchRef.current);
-              p.background(255);
-              console.log('Right sketch setup'); // Debug log
-            } else {
-              console.error('Right sketch ref not found');
-            }
+            p.createCanvas(600, 150).parent(rightSketchRef.current!);
+            p.background(255);
+            console.log('Right sketch setup');
           };
 
           p.draw = () => {
@@ -186,102 +174,79 @@ const ControlPanel = () => {
               p.background(255);
               p.stroke(135, 206, 250); // Sky blue
               p.strokeWeight(2);
-              p.noFill();
-              p.beginShape();
-              for (let x = 0; x < p.width; x++) {
-                let y = p.height / 2 + p.sin(p.frameCount * 0.05 + (x / 50) * (rightFreq / 100)) * (p.height / 4) * (volume / 100);
-                p.vertex(x, y);
-              }
-              p.endShape();
-              console.log('Right sketch drawing, rightFreq:', rightFreq); // Debug log
+              p.line(0, p.height / 2, p.width, p.height / 2); // Simple line for debugging
+              console.log('Right sketch drawing, rightFreq:', rightFreq);
             } else {
-              p.background(255); // Clear canvas when not playing
+              p.background(255);
             }
           };
-        });
-        rightSketchRefInstance.current = newRightSketch;
+        };
+        rightSketchRefInstance.current = new p5(sketch);
       }
 
-      // Overlap Waveform (Beat Frequency)
+      // Overlap Waveform (Simplified for debugging)
       if (!overlapSketchRefInstance.current) {
-        const newOverlapSketch = new p5((p: any) => {
+        const sketch = (p: p5) => {
           p.setup = () => {
-            if (overlapSketchRef.current) {
-              p.createCanvas(600, 150).parent(overlapSketchRef.current);
-              p.background(255);
-              console.log('Overlap sketch setup'); // Debug log
-            } else {
-              console.error('Overlap sketch ref not found');
-            }
+            p.createCanvas(600, 150).parent(overlapSketchRef.current!);
+            p.background(255);
+            console.log('Overlap sketch setup');
           };
 
           p.draw = () => {
             if (isPlaying) {
               p.background(255);
-              const beatFreq = Math.abs(leftFreq - rightFreq);
               p.stroke(255, 215, 0); // Gold
               p.strokeWeight(3);
-              p.noFill();
-              p.beginShape();
-              for (let x = 0; x < p.width; x++) {
-                let y = p.height / 2 + p.sin(p.frameCount * 0.05 + (x / 50) * (beatFreq / 100)) * (p.height / 4) * (volume / 100);
-                p.vertex(x, y);
-              }
-              p.endShape();
-              console.log('Overlap sketch drawing, beatFreq:', beatFreq); // Debug log
+              p.line(0, p.height / 2, p.width, p.height / 2); // Simple line for debugging
+              console.log('Overlap sketch drawing, beatFreq:', Math.abs(leftFreq - rightFreq));
             } else {
-              p.background(255); // Clear canvas when not playing
+              p.background(255);
             }
           };
-        });
-        overlapSketchRefInstance.current = newOverlapSketch;
+        };
+        overlapSketchRefInstance.current = new p5(sketch);
       }
 
-      // Sacred Geometry Mandala
+      // Sacred Geometry Mandala (Simplified for debugging)
       if (!mandalaSketchRefInstance.current) {
-        const newMandalaSketch = new p5((p: any) => {
+        const sketch = (p: p5) => {
           p.setup = () => {
-            if (mandalaSketchRef.current) {
-              p.createCanvas(600, 300).parent(mandalaSketchRef.current);
-              p.angleMode(p.DEGREES);
-              p.colorMode(p.HSB);
-              console.log('Mandala sketch setup'); // Debug log
-            } else {
-              console.error('Mandala sketch ref not found');
-            }
+            p.createCanvas(600, 300).parent(mandalaSketchRef.current!);
+            p.background(255);
+            console.log('Mandala sketch setup');
           };
 
           p.draw = () => {
             if (isPlaying) {
               p.background(255);
-              p.translate(p.width / 2, p.height / 2);
-              const beatFreq = Math.abs(leftFreq - rightFreq);
-              const layers = p.map(volume, 0, 100, 5, 20);
-              const radius = p.map(beatFreq, 0, 100, 50, 150);
-              for (let i = 0; i < layers; i++) {
-                p.beginShape();
-                const angleStep = 360 / (i + 3);
-                for (let angle = 0; angle < 360; angle += angleStep) {
-                  let r = radius * (1 + p.sin(p.frameCount * 0.1 + i * 10) * 0.2);
-                  let x = r * p.cos(angle);
-                  let y = r * p.sin(angle);
-                  p.vertex(x, y);
-                  const hue = (p.frameCount + i * 36 + beatFreq * 0.5) % 360;
-                  p.stroke(hue, 70, 80);
-                  p.strokeWeight(1 + i * 0.2);
-                }
-                p.endShape(p.CLOSE);
-              }
-              console.log('Mandala sketch drawing, beatFreq:', beatFreq, 'volume:', volume); // Debug log
+              p.stroke(0);
+              p.strokeWeight(2);
+              p.ellipse(p.width / 2, p.height / 2, 100, 100); // Simple circle for debugging
+              console.log('Mandala sketch drawing');
             } else {
-              p.background(255); // Clear canvas when not playing
+              p.background(255);
             }
           };
-        });
-        mandalaSketchRefInstance.current = newMandalaSketch;
+        };
+        mandalaSketchRefInstance.current = new p5(sketch);
       }
-    }).catch((err) => console.error('Failed to load p5:', err));
-  };
+    };
+
+    initializeSketches();
+
+    return () => {
+      // Cleanup on unmount
+      leftSketchRefInstance.current?.remove();
+      rightSketchRefInstance.current?.remove();
+      overlapSketchRefInstance.current?.remove();
+      mandalaSketchRefInstance.current?.remove();
+      leftSketchRefInstance.current = null;
+      rightSketchRefInstance.current = null;
+      overlapSketchRefInstance.current = null;
+      mandalaSketchRefInstance.current = null;
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-100 to-indigo-100 p-6">
@@ -290,19 +255,19 @@ const ControlPanel = () => {
         <div className="space-y-6">
           <div className="p-4 bg-gray-50 rounded-lg shadow-inner">
             <label className="block font-semibold text-sm text-gray-700">Left Ear Waveform</label>
-            <div ref={leftSketchRef} className="border-2 border-gray-200 rounded-lg overflow-hidden"></div>
+            <div ref={leftSketchRef} className="border-2 border-gray-200 rounded-lg overflow-hidden" style={{ position: 'relative', width: '600px', height: '150px' }}></div>
           </div>
           <div className="p-4 bg-gray-50 rounded-lg shadow-inner">
             <label className="block font-semibold text-sm text-gray-700">Right Ear Waveform</label>
-            <div ref={rightSketchRef} className="border-2 border-gray-200 rounded-lg overflow-hidden"></div>
+            <div ref={rightSketchRef} className="border-2 border-gray-200 rounded-lg overflow-hidden" style={{ position: 'relative', width: '600px', height: '150px' }}></div>
           </div>
           <div className="p-4 bg-gray-50 rounded-lg shadow-inner">
             <label className="block font-semibold text-sm text-gray-700">Overlap (Beat Frequency)</label>
-            <div ref={overlapSketchRef} className="border-2 border-gray-200 rounded-lg overflow-hidden"></div>
+            <div ref={overlapSketchRef} className="border-2 border-gray-200 rounded-lg overflow-hidden" style={{ position: 'relative', width: '600px', height: '150px' }}></div>
           </div>
           <div className="p-4 bg-gray-50 rounded-lg shadow-inner">
             <label className="block font-semibold text-sm text-gray-700">Sacred Geometry Mandala</label>
-            <div ref={mandalaSketchRef} className="border-2 border-gray-200 rounded-lg overflow-hidden"></div>
+            <div ref={mandalaSketchRef} className="border-2 border-gray-200 rounded-lg overflow-hidden" style={{ position: 'relative', width: '600px', height: '300px' }}></div>
           </div>
         </div>
         <button
@@ -357,7 +322,7 @@ const ControlPanel = () => {
             <SliderPrimitive.Thumb className="block w-5 h-5 bg-blue-500 rounded-full focus:outline-none shadow" />
           </SliderPrimitive.Root>
         </div>
-        <div className="mt-4"> {/* Fixed syntax error: added = after className */}
+        <div className="mt-4">
           <label className="block text-gray-700">Tone Type</label>
           <select
             value={toneType}
