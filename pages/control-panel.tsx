@@ -22,10 +22,11 @@ const ControlPanel = () => {
   const leftPannerRef = React.useRef<StereoPannerNode | null>(null);
   const rightPannerRef = React.useRef<StereoPannerNode | null>(null);
   const gainNodeRef = React.useRef<GainNode | null>(null);
-  const leftSketchRefInstance = React.useRef<p5 | null>(null);
-  const rightSketchRefInstance = React.useRef<p5 | null>(null);
-  const overlapSketchRefInstance = React.useRef<p5 | null>(null);
-  const mandalaSketchRefInstance = React.useRef<p5 | null>(null);
+  // Use 'any' temporarily since p5 type might not be available until loaded
+  const leftSketchRefInstance = React.useRef<any>(null);
+  const rightSketchRefInstance = React.useRef<any>(null);
+  const overlapSketchRefInstance = React.useRef<any>(null);
+  const mandalaSketchRefInstance = React.useRef<any>(null);
 
   // Load p5.js script dynamically on the client side
   React.useEffect(() => {
@@ -172,7 +173,7 @@ const ControlPanel = () => {
 
       // Left Frequency Waveform (Simplified for debugging)
       if (!leftSketchRefInstance.current) {
-        const sketch = (p: p5) => {
+        const sketch = (p: any) => { // Use 'any' until p5 type is confirmed
           p.setup = () => {
             p.createCanvas(600, 150).parent(leftSketchRef.current!);
             p.background(255);
@@ -196,7 +197,7 @@ const ControlPanel = () => {
 
       // Right Frequency Waveform (Simplified for debugging)
       if (!rightSketchRefInstance.current) {
-        const sketch = (p: p5) => {
+        const sketch = (p: any) => {
           p.setup = () => {
             p.createCanvas(600, 150).parent(rightSketchRef.current!);
             p.background(255);
@@ -220,7 +221,7 @@ const ControlPanel = () => {
 
       // Overlap Waveform (Simplified for debugging)
       if (!overlapSketchRefInstance.current) {
-        const sketch = (p: p5) => {
+        const sketch = (p: any) => {
           p.setup = () => {
             p.createCanvas(600, 150).parent(overlapSketchRef.current!);
             p.background(255);
@@ -244,7 +245,7 @@ const ControlPanel = () => {
 
       // Sacred Geometry Mandala (Simplified for debugging)
       if (!mandalaSketchRefInstance.current) {
-        const sketch = (p: p5) => {
+        const sketch = (p: any) => {
           p.setup = () => {
             p.createCanvas(600, 300).parent(mandalaSketchRef.current!);
             p.background(255);
