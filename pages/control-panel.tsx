@@ -6,6 +6,7 @@ import * as SliderPrimitive from '@radix-ui/react-slider';
 const ControlPanel = () => {
   const [leftFreq, setLeftFreq] = React.useState(200);
   const [rightFreq, setRightFreq] = React.useState(210);
+  const [baseFreq, setBaseFreq] = React.useState(200); // New slider for both frequencies
   const [toneType, setToneType] = React.useState('Sine');
   const [bgMusic, setBgMusic] = React.useState('None');
   const [volume, setVolume] = React.useState(50);
@@ -13,7 +14,7 @@ const ControlPanel = () => {
   const leftSketchRef = React.useRef<HTMLDivElement>(null);
   const rightSketchRef = React.useRef<HTMLDivElement>(null);
   const overlapSketchRef = React.useRef<HTMLDivElement>(null);
-  const fractalSketchRef = React.useRef<HTMLDivElement>(null);
+  const mandalaSketchRef = React.useRef<HTMLDivElement>(null);
   const audioContextRef = React.useRef<AudioContext | null>(null);
   const leftOscillatorRef = React.useRef<OscillatorNode | null>(null);
   const rightOscillatorRef = React.useRef<OscillatorNode | null>(null);
@@ -23,7 +24,14 @@ const ControlPanel = () => {
   const [leftSketch, setLeftSketch] = React.useState<any>(null);
   const [rightSketch, setRightSketch] = React.useState<any>(null);
   const [overlapSketch, setOverlapSketch] = React.useState<any>(null);
-  const [fractalSketch, setFractalSketch] = React.useState<any>(null);
+  const [mandalaSketch, setMandalaSketch] = React.useState<any>(null);
+
+  // Sync base frequency with left and right frequencies
+  React.useEffect(() => {
+    const diff = rightFreq - leftFreq;
+    setLeftFreq(baseFreq);
+    setRightFreq(baseFreq + diff);
+  }, [baseFreq]);
 
   // Initialize AudioContext and Oscillators
   const setupAudio = () => {
@@ -58,8 +66,8 @@ const ControlPanel = () => {
       rightOscillatorRef.current.connect(rightPannerRef.current!);
       rightOscillatorRef.current.start();
 
-      // Initialize sketches only once when starting
-      initializeSketches();
+      // Initialize sketches only if not already initialized
+      if (!leftSketch) initializeSketches();
     }
     setIsPlaying(true);
   };
@@ -84,15 +92,15 @@ const ControlPanel = () => {
       rightOscillatorRef.current.stop();
       leftOscillatorRef.current = null;
       rightOscillatorRef.current = null;
-      // Clean up sketches when stopping
+      // Clean up sketches
       leftSketch?.remove();
       rightSketch?.remove();
       overlapSketch?.remove();
-      fractalSketch?.remove();
+      mandalaSketch?.remove();
       setLeftSketch(null);
       setRightSketch(null);
       setOverlapSketch(null);
-      setFractalSketch(null);
+      setMandalaSketch(null);
     }
     setIsPlaying(false);
   };
@@ -204,63 +212,43 @@ const ControlPanel = () => {
         setOverlapSketch(newOverlapSketch);
       }
 
-      // Mandelbrot Fractal
-      if (!fractalSketch) {
-        const newFractalSketch = new p5((p: any) => {
+      // Sacred Geometry Mandala
+      if (!mandalaSketch) {
+        const newMandalaSketch = new p5((p: any) => {
           p.setup = () => {
-            p.createCanvas(600, 300).parent(fractalSketchRef.current!); // Increased height for detail
-            p.pixelDensity(1);
+            p.createCanvas(600, 300).parent(mandalaSketchRef.current!);
+            p.angleMode(p.DEGREES);
             p.colorMode(p.HSB);
           };
 
           p.draw = () => {
             if (isPlaying) {
-              p.loadPixels();
-              const maxIterations = 100;
+              p.background(255);
+              p.translate(p.width / 2, p.height / 2);
               const beatFreq = Math.abs(leftFreq - rightFreq);
-              const zoom = p.map(volume, 0, 100, 0.5, 2);
-              for (let x = 0; x < p.width; x++) {
-                for (let y = 0; y < p.height; y++) {
-                  const a = p.map(x, 0, p.width, -2.5 / zoom, 1.5 / zoom);
-                  const b = p.map(y, 0, p.height, -2 / zoom, 2 / zoom);
-                  let ca = a;
-                  let cb = b;
-                  let n = 0;
-                  let z = 0;
-                  let zi = 0;
-                  while (n < maxIterations && z * z + zi * zi < 4) {
-                    const newZ = z * z - zi * zi + ca;
-                    const newZi = 2 * z * zi + cb;
-                    z = newZ;
-                    zi = newZi;
-                    n++;
-                  }
-                  if (n === maxIterations) {
-                    p.pixels[y * p.width * 4 + x * 4 + 3] = 255; // Set alpha
-                  } else {
-                    const hue = (n * 2.5 + beatFreq * 0.1) % 360;
-                    p.pixels[y * p.width * 4 + x * 4] = hue; // H
-                    p.pixels[y * p.width * 4 + x * 4 + 1] = 255; // S
-                    p.pixels[y * p.width * 4 + x * 4 + 2] = p.map(n, 0, maxIterations, 0, 255); // B
-                    p.pixels[y * p.width * 4 + x * 4 + 3] = 255; // A
-                  }
+              const layers = p.map(volume, 0, 100, 5, 20);
+              const radius = p.map(beatFreq, 0, 100, 50, 150);
+              for (let i = 0; i < layers; i++) {
+                p.beginShape();
+                const angleStep = 360 / (i + 3);
+                for (let angle = 0; angle < 360; angle += angleStep) {
+                  let r = radius * (1 + p.sin(p.frameCount * 0.1 + i * 10) * 0.2);
+                  let x = r * p.cos(angle);
+                  let y = r * p.sin(angle);
+                  p.vertex(x, y);
+                  const hue = (p.frameCount + i * 36 + beatFreq * 0.5) % 360;
+                  p.stroke(hue, 70, 80);
+                  p.strokeWeight(1 + i * 0.2);
                 }
+                p.endShape(p.CLOSE);
               }
-              p.updatePixels();
             }
           };
         });
-        setFractalSketch(newFractalSketch);
+        setMandalaSketch(newMandalaSketch);
       }
     }).catch((err) => console.error('Failed to load p5:', err));
   };
-
-  // Re-initialize sketches only when starting or stopping
-  React.useEffect(() => {
-    if (isPlaying && !leftSketch && !rightSketch && !overlapSketch && !fractalSketch) {
-      initializeSketches();
-    }
-  }, [isPlaying]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-100 to-indigo-100 p-6">
@@ -280,8 +268,8 @@ const ControlPanel = () => {
             <div ref={overlapSketchRef} className="border-2 border-gray-200 rounded-lg overflow-hidden"></div>
           </div>
           <div className="p-4 bg-gray-50 rounded-lg shadow-inner">
-            <label className="block font-semibold text-sm text-gray-700">Mandelbrot Fractal</label>
-            <div ref={fractalSketchRef} className="border-2 border-gray-200 rounded-lg overflow-hidden"></div>
+            <label className="block font-semibold text-sm text-gray-700">Sacred Geometry Mandala</label>
+            <div ref={mandalaSketchRef} className="border-2 border-gray-200 rounded-lg overflow-hidden"></div>
           </div>
         </div>
         <button
@@ -290,6 +278,22 @@ const ControlPanel = () => {
         >
           {isPlaying ? 'Resume' : 'Play'}
         </button>
+        <div className="mt-4">
+          <label className="block text-gray-700">Base Frequency: {baseFreq} Hz</label>
+          <SliderPrimitive.Root
+            value={[baseFreq]}
+            onValueChange={(value) => setBaseFreq(value[0])}
+            min={50}
+            max={1000}
+            step={1}
+            className="relative flex items-center w-full mt-2"
+          >
+            <SliderPrimitive.Track className="bg-gray-300 h-2 w-full rounded-full">
+              <SliderPrimitive.Range className="absolute bg-blue-500 h-full rounded-full" />
+            </SliderPrimitive.Track>
+            <SliderPrimitive.Thumb className="block w-5 h-5 bg-blue-500 rounded-full focus:outline-none shadow" />
+          </SliderPrimitive.Root>
+        </div>
         <div className="mt-4">
           <label className="block text-gray-700">Left Frequency: {leftFreq} Hz</label>
           <SliderPrimitive.Root
