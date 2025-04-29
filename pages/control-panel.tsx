@@ -357,7 +357,7 @@ const ControlPanel = () => {
             <SliderPrimitive.Thumb className="block w-5 h-5 bg-blue-500 rounded-full focus:outline-none shadow" />
           </SliderPrimitive.Root>
         </div>
-        <div className "mt-4">
+        <div className="mt-4"> {/* Fixed syntax error: added = after className */}
           <label className="block text-gray-700">Tone Type</label>
           <select
             value={toneType}
