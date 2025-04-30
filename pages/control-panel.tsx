@@ -26,7 +26,7 @@ const ControlPanel = () => {
   const rightSketchRefInstance = React.useRef<any>(null);
   const overlapSketchRefInstance = React.useRef<any>(null);
   const mandalaSketchRefInstance = React.useRef<any>(null);
-  const freqRef = React.useRef({ leftFreq: 174, rightFreq: 174 });
+  const freqRef = React.useRef({ leftFreq: 174, rightFreq: 174, toneType: 'Sine' });
 
   // Load p5.js script dynamically on the client side
   React.useEffect(() => {
@@ -63,10 +63,10 @@ const ControlPanel = () => {
     setRightFreq(baseFreq + diff);
   }, [baseFreq]);
 
-  // Update freqRef when frequencies or volume change
+  // Update freqRef when frequencies, volume, or toneType change
   React.useEffect(() => {
-    freqRef.current = { leftFreq, rightFreq };
-  }, [leftFreq, rightFreq, volume]);
+    freqRef.current = { leftFreq, rightFreq, toneType };
+  }, [leftFreq, rightFreq, volume, toneType]);
 
   // Initialize AudioContext and Oscillators
   const setupAudio = () => {
@@ -171,6 +171,24 @@ const ControlPanel = () => {
     const initializeSketches = () => {
       console.log('Initializing sketches');
 
+      // Function to calculate waveform value based on toneType
+      const getWaveformValue = (p: any, x: number, freq: number, toneType: string, phase: number, amplitude: number) => {
+        const t = x * 0.1 + phase;
+        const scaledFreq = freq / 174;
+        switch (toneType.toLowerCase()) {
+          case 'sine':
+            return p.sin(t * scaledFreq) * amplitude;
+          case 'square':
+            return p.sin(t * scaledFreq) > 0 ? amplitude : -amplitude;
+          case 'sawtooth':
+            return ((t * scaledFreq) % p.TWO_PI) / p.PI * amplitude - amplitude;
+          case 'triangle':
+            return (2 / p.PI) * p.asin(p.sin(t * scaledFreq)) * amplitude;
+          default:
+            return p.sin(t * scaledFreq) * amplitude;
+        }
+      };
+
       // Left Frequency Waveform
       if (!leftSketchRefInstance.current) {
         const sketch = (p: any) => {
@@ -185,12 +203,12 @@ const ControlPanel = () => {
               p.background(255);
               p.stroke(255, 99, 71); // Tomato red
               p.strokeWeight(2);
-              const amplitude = (volume / 100) * 50; // Scale amplitude with volume
+              const amplitude = (volume / 100) * 50;
               for (let x = 0; x < p.width; x++) {
-                let y = p.height / 2 + p.sin(x * 0.1 + p.frameCount * 0.05) * amplitude * (freqRef.current.leftFreq / 174);
+                let y = p.height / 2 + getWaveformValue(p, x, freqRef.current.leftFreq, freqRef.current.toneType, p.frameCount * 0.05, amplitude);
                 p.point(x, y);
               }
-              console.log('Left sketch drawing, leftFreq:', freqRef.current.leftFreq, 'volume:', volume);
+              console.log('Left sketch drawing, leftFreq:', freqRef.current.leftFreq, 'volume:', volume, 'toneType:', freqRef.current.toneType);
             } else {
               p.background(255);
             }
@@ -213,12 +231,12 @@ const ControlPanel = () => {
               p.background(255);
               p.stroke(135, 206, 250); // Sky blue
               p.strokeWeight(2);
-              const amplitude = (volume / 100) * 50; // Scale amplitude with volume
+              const amplitude = (volume / 100) * 50;
               for (let x = 0; x < p.width; x++) {
-                let y = p.height / 2 + p.sin(x * 0.1 + p.frameCount * 0.05) * amplitude * (freqRef.current.rightFreq / 174);
+                let y = p.height / 2 + getWaveformValue(p, x, freqRef.current.rightFreq, freqRef.current.toneType, p.frameCount * 0.05, amplitude);
                 p.point(x, y);
               }
-              console.log('Right sketch drawing, rightFreq:', freqRef.current.rightFreq, 'volume:', volume);
+              console.log('Right sketch drawing, rightFreq:', freqRef.current.rightFreq, 'volume:', volume, 'toneType:', freqRef.current.toneType);
             } else {
               p.background(255);
             }
@@ -242,12 +260,12 @@ const ControlPanel = () => {
               p.stroke(255, 215, 0); // Gold
               p.strokeWeight(3);
               const beatFreq = Math.abs(freqRef.current.rightFreq - freqRef.current.leftFreq);
-              const amplitude = (volume / 100) * 50; // Scale amplitude with volume
+              const amplitude = (volume / 100) * 50;
               for (let x = 0; x < p.width; x++) {
-                let y = p.height / 2 + p.sin(x * 0.1 + p.frameCount * 0.05 * (beatFreq / 10)) * amplitude;
+                let y = p.height / 2 + getWaveformValue(p, x, beatFreq, freqRef.current.toneType, p.frameCount * 0.05 * (beatFreq / 10), amplitude);
                 p.point(x, y);
               }
-              console.log('Overlap sketch drawing, beatFreq:', beatFreq, 'volume:', volume);
+              console.log('Overlap sketch drawing, beatFreq:', beatFreq, 'volume:', volume, 'toneType:', freqRef.current.toneType);
             } else {
               p.background(255);
             }
@@ -271,24 +289,36 @@ const ControlPanel = () => {
               p.stroke(0);
               p.strokeWeight(1);
               const beatFreq = Math.abs(freqRef.current.rightFreq - freqRef.current.leftFreq);
-              const baseRadius = 50 + (beatFreq / 10); // Base radius influenced by beat frequency
-              const amplitude = (volume / 100) * 50; // Scale size with volume
-              const radius = baseRadius + p.sin(p.frameCount * 0.05) * amplitude;
+              const baseRadius = 50 + (beatFreq / 10);
+              const amplitude = (volume / 100) * 50;
+              const rotation = p.frameCount * (freqRef.current.leftFreq / 1000); // Rotate based on leftFreq
+
+              // Number of outer circles based on beat frequency
+              const numCircles = Math.floor(beatFreq / 10) + 3; // At least 3 circles
+              const innerScale = freqRef.current.toneType === 'Sine' ? 0.5 : 
+                               freqRef.current.toneType === 'Square' ? 0.4 : 
+                               freqRef.current.toneType === 'Sawtooth' ? 0.6 : 0.45; // Adjust inner circle size by toneType
+
+              p.push();
+              p.translate(p.width / 2, p.height / 2);
+              p.rotate(rotation);
 
               // Draw Flower of Life pattern
-              for (let i = 0; i < 6; i++) {
-                let angle = p.TWO_PI / 6 * i;
-                let x = p.width / 2 + p.cos(angle) * radius;
-                let y = p.height / 2 + p.sin(angle) * radius;
-                p.ellipse(x, y, radius * 0.5, radius * 0.5);
+              for (let i = 0; i < numCircles; i++) {
+                let angle = p.TWO_PI / numCircles * i;
+                let x = p.cos(angle) * baseRadius;
+                let y = p.sin(angle) * baseRadius;
+                p.ellipse(x, y, baseRadius * 0.5, baseRadius * 0.5);
                 for (let j = 0; j < 6; j++) {
                   let innerAngle = p.TWO_PI / 6 * j;
-                  let innerX = x + p.cos(innerAngle) * (radius * 0.5);
-                  let innerY = y + p.sin(innerAngle) * (radius * 0.5);
-                  p.ellipse(innerX, innerY, radius * 0.3, radius * 0.3);
+                  let innerX = x + p.cos(innerAngle) * (baseRadius * innerScale);
+                  let innerY = y + p.sin(innerAngle) * (baseRadius * innerScale);
+                  p.ellipse(innerX, innerY, baseRadius * innerScale * 0.6, baseRadius * innerScale * 0.6);
                 }
               }
-              console.log('Mandala sketch drawing, beatFreq:', beatFreq, 'volume:', volume);
+              p.pop();
+
+              console.log('Mandala sketch drawing, beatFreq:', beatFreq, 'volume:', volume, 'toneType:', freqRef.current.toneType);
             } else {
               p.background(255);
             }
