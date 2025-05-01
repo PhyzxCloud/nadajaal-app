@@ -164,12 +164,11 @@ const Basics = () => {
         rainPlayerRef.current = new Tone.Player({
           url: "/sounds/rain-loop.mp3",
           loop: true,
-          volume: -20, // Lower volume for rain
+          volume: -20,
         }).toDestination();
         rainPlayerRef.current.start();
 
         // Create a simple melody based on the solfeggio base
-        const solfeggioBase = nadaPresets[selectedNada].solfeggioBase;
         const notes = ["C4", "E4", "G4"];
         const melody = notes.map((note, index) => ({
           time: index * 2,
@@ -193,20 +192,29 @@ const Basics = () => {
   };
 
   const pauseAudio = () => {
-    if (Tone && audioContextRef.current) {
+    if (Tone && audioContextRef.current && isPlaying) {
       Tone.Transport.pause();
-      if (rainPlayerRef.current) rainPlayerRef.current.stop();
+      if (bgSynthRef.current) {
+        bgSynthRef.current.releaseAll();
+      }
+      if (rainPlayerRef.current) {
+        rainPlayerRef.current.stop();
+      }
       setIsPlaying(false);
       console.log('Audio paused');
     }
   };
 
   const stopAudio = () => {
-    if (Tone && leftOscillatorRef.current && rightOscillatorRef.current) {
-      leftOscillatorRef.current.stop();
-      rightOscillatorRef.current.stop();
-      leftOscillatorRef.current = null;
-      rightOscillatorRef.current = null;
+    if (Tone && (leftOscillatorRef.current || rightOscillatorRef.current)) {
+      if (leftOscillatorRef.current) {
+        leftOscillatorRef.current.stop();
+        leftOscillatorRef.current = null;
+      }
+      if (rightOscillatorRef.current) {
+        rightOscillatorRef.current.stop();
+        rightOscillatorRef.current = null;
+      }
 
       // Clean up background music and rain
       if (bgSynthRef.current) {
@@ -236,9 +244,9 @@ const Basics = () => {
       rightSketchRefInstance.current = null;
       thirdEyeSketchRefInstance.current = null;
       mandalaSketchRefInstance.current = null;
+      setIsPlaying(false);
       console.log('Audio stopped and sketches cleared');
     }
-    setIsPlaying(false);
   };
 
   // Update volume in real-time
