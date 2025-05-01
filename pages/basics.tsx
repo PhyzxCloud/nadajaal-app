@@ -3,8 +3,17 @@
 import * as React from 'react';
 import * as SliderPrimitive from '@radix-ui/react-slider';
 
+// Define Nada types
+type NadaName = 'Anahata Nada' | 'Vishuddha Nada' | 'Ajna Nada';
+type NadaPreset = {
+  baseFreq: number;
+  leftFreq: number;
+  rightFreq: number;
+  description: string;
+};
+
 const Basics = () => {
-  const [selectedNada, setSelectedNada] = React.useState('Anahata Nada');
+  const [selectedNada, setSelectedNada] = React.useState<NadaName>('Anahata Nada');
   const [volume, setVolume] = React.useState(50);
   const [toneType, setToneType] = React.useState('Sine');
   const [isPlaying, setIsPlaying] = React.useState(false);
@@ -26,7 +35,7 @@ const Basics = () => {
   const freqRef = React.useRef({ leftFreq: 174, rightFreq: 178, toneType: 'Sine' });
 
   // Nada frequency presets
-  const nadaPresets = {
+  const nadaPresets: Record<NadaName, NadaPreset> = {
     'Anahata Nada': { baseFreq: 174, leftFreq: 174, rightFreq: 178, description: 'Heart Chakra - Promotes love and balance (4 Hz beat)' },
     'Vishuddha Nada': { baseFreq: 285, leftFreq: 285, rightFreq: 291, description: 'Throat Chakra - Enhances communication (6 Hz beat)' },
     'Ajna Nada': { baseFreq: 396, leftFreq: 396, rightFreq: 402, description: 'Third Eye Chakra - Supports intuition (6 Hz beat)' },
@@ -373,7 +382,7 @@ const Basics = () => {
             <label className="block text-gray-700 text-sm sm:text-base">Select Nada</label>
             <select
               value={selectedNada}
-              onChange={(e) => setSelectedNada(e.target.value)}
+              onChange={(e) => setSelectedNada(e.target.value as NadaName)}
               className="w-full p-2 border border-gray-300 rounded-lg bg-white text-gray-800 shadow-inner text-sm sm:text-base"
             >
               {Object.keys(nadaPresets).map((nada) => (
