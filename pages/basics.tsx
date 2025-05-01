@@ -5,7 +5,7 @@ import * as SliderPrimitive from '@radix-ui/react-slider';
 
 // Define Nada types with custom toneType union
 type NadaName = 'Bhumi' | 'Pravaha' | 'Shanta' | 'Arogya' | 'Chapala' | 'Matri' | 'Samatva' | 'Gupta' | 'Jyoti' | 'Tejas' | 'Sthira' | 'Ananta';
-type ToneType = 'sine' | 'square' | 'sawtooth' | 'triangle'; // Custom type for tone.js compatibility
+type ToneType = 'sine' | 'square' | 'sawtooth' | 'triangle';
 type NadaPreset = {
   baseFreq: number;
   leftFreq: number;
@@ -116,9 +116,9 @@ const Basics = () => {
       bgSynthRef.current = new Tone.PolySynth(Tone.Synth).toDestination();
       const solfeggioBase = nadaPresets[selectedNada].solfeggioBase;
       const harmonics = [solfeggioBase, solfeggioBase * 2, solfeggioBase * 3];
-      const sequence = new Tone.Part(((time, note) => {
+      const sequence = new Tone.Part((time: number, note: number) => { // Explicitly typed parameters
         bgSynthRef.current!.triggerAttackRelease(note, '2n', time, 0.5);
-      }), harmonics.map(freq => [0, freq])).start(0);
+      }, harmonics.map(freq => [0, freq])).start(0);
       sequence.loop = true;
       sequence.loopEnd = '1m';
       Tone.Transport.start();
