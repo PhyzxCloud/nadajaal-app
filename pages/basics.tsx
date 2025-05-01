@@ -11,6 +11,11 @@ type NadaPreset = {
   rightFreq: number;
   description: string;
 };
+type FreqRef = {
+  leftFreq: number;
+  rightFreq: number;
+  toneType: string;
+};
 
 const Basics = () => {
   const [selectedNada, setSelectedNada] = React.useState<NadaName>('Anahata Nada');
@@ -32,7 +37,7 @@ const Basics = () => {
   const rightSketchRefInstance = React.useRef<any>(null);
   const overlapSketchRefInstance = React.useRef<any>(null);
   const mandalaSketchRefInstance = React.useRef<any>(null);
-  const freqRef = React.useRef({ leftFreq: 174, rightFreq: 178, toneType: 'Sine' });
+  const freqRef = React.useRef<FreqRef>({ leftFreq: 174, rightFreq: 178, toneType: 'Sine' });
 
   // Nada frequency presets
   const nadaPresets: Record<NadaName, NadaPreset> = {
@@ -43,8 +48,8 @@ const Basics = () => {
 
   // Sync frequencies with selected Nada
   React.useEffect(() => {
-    const preset = nadaPresets[selectedNada];
-    freqRef.current = { ...freqRef.current, leftFreq: preset.leftFreq, rightFreq: preset.rightFreq, toneType };
+    const preset = nadaPresets[selectedNada as NadaName]; // Explicitly cast to ensure type safety
+    freqRef.current = { leftFreq: preset.leftFreq, rightFreq: preset.rightFreq, toneType };
   }, [selectedNada, toneType]);
 
   // Load p5.js script dynamically
@@ -385,7 +390,7 @@ const Basics = () => {
               onChange={(e) => setSelectedNada(e.target.value as NadaName)}
               className="w-full p-2 border border-gray-300 rounded-lg bg-white text-gray-800 shadow-inner text-sm sm:text-base"
             >
-              {Object.keys(nadaPresets).map((nada) => (
+              {(Object.keys(nadaPresets) as NadaName[]).map((nada) => (
                 <option key={nada} value={nada}>{nada}</option>
               ))}
             </select>
