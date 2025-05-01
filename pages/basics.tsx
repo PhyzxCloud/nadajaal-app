@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import * as SliderPrimitive from '@radix-ui/react-slider';
+import * as Tone from 'tone'; // Import tone.js for advanced audio
 
 // Define Nada types
 type NadaName = 'Bhumi' | 'Pravaha' | 'Shanta' | 'Arogya' | 'Chapala' | 'Matri' | 'Samatva' | 'Gupta' | 'Jyoti' | 'Tejas' | 'Sthira' | 'Ananta';
@@ -11,6 +12,7 @@ type NadaPreset = {
   rightFreq: number;
   description: string;
   toneType: string;
+  solfeggioBase: number; // Add Solfeggio base frequency
 };
 type FreqRef = {
   leftFreq: number;
@@ -27,37 +29,35 @@ const Basics = () => {
   const [selectedMood, setSelectedMood] = React.useState<Mood>('Calm');
   const leftSketchRef = React.useRef<HTMLDivElement>(null);
   const rightSketchRef = React.useRef<HTMLDivElement>(null);
-  const discSketchRef = React.useRef<HTMLDivElement>(null);
+  const thirdEyeSketchRef = React.useRef<HTMLDivElement>(null); // Renamed from discSketchRef
   const mandalaSketchRef = React.useRef<HTMLDivElement>(null);
-  const audioContextRef = React.useRef<AudioContext | null>(null);
-  const leftOscillatorRef = React.useRef<OscillatorNode | null>(null);
-  const rightOscillatorRef = React.useRef<OscillatorNode | null>(null);
-  const leftPannerRef = React.useRef<StereoPannerNode | null>(null);
-  const rightPannerRef = React.useRef<StereoPannerNode | null>(null);
-  const gainNodeRef = React.useRef<GainNode | null>(null);
-  const bgGainNodeRef = React.useRef<GainNode | null>(null);
-  const bgOscillatorsRef = React.useRef<(OscillatorNode | null)[]>([]);
-  const bgStopTimesRef = React.useRef<number[]>([]); // Track stop times for background oscillators
+  const audioContextRef = React.useRef<Tone.Context | null>(null); // Use Tone.Context
+  const leftOscillatorRef = React.useRef<Tone.Oscillator | null>(null);
+  const rightOscillatorRef = React.useRef<Tone.Oscillator | null>(null);
+  const leftPannerRef = React.useRef<Tone.Panner | null>(null);
+  const rightPannerRef = React.useRef<Tone.Panner | null>(null);
+  const gainNodeRef = React.useRef<Tone.Gain | null>(null);
+  const bgSynthRef = React.useRef<Tone.PolySynth | null>(null);
   const leftSketchRefInstance = React.useRef<any>(null);
   const rightSketchRefInstance = React.useRef<any>(null);
-  const discSketchRefInstance = React.useRef<any>(null);
+  const thirdEyeSketchRefInstance = React.useRef<any>(null); // Renamed
   const mandalaSketchRefInstance = React.useRef<any>(null);
   const freqRef = React.useRef<FreqRef>({ leftFreq: 7.83, rightFreq: 11.83, toneType: 'Sine' });
 
-  // Nada frequency presets with binaural offsets and tone types
+  // Nada frequency presets with Solfeggio bases
   const nadaPresets: Record<NadaName, NadaPreset> = {
-    'Bhumi': { baseFreq: 7.83, leftFreq: 7.83, rightFreq: 11.83, description: "Earth's vibration - Grounding and stability", toneType: 'Sine' },
-    'Pravaha': { baseFreq: 174, leftFreq: 174, rightFreq: 178, description: "Relieves Pain & Stress - Calming and soothing", toneType: 'Sine' },
-    'Shanta': { baseFreq: 285, leftFreq: 285, rightFreq: 291, description: "Heals Tissues & Organs - Restorative energy", toneType: 'Sine' },
-    'Arogya': { baseFreq: 396, leftFreq: 396, rightFreq: 402, description: "Eliminates Fear - Courage and confidence", toneType: 'Square' },
-    'Chapala': { baseFreq: 417, leftFreq: 417, rightFreq: 423, description: "Wipes out Negativity - Cleansing and renewal", toneType: 'Sawtooth' },
-    'Matri': { baseFreq: 528, leftFreq: 528, rightFreq: 534, description: "Repairs DNA, Brings Positive Transformation - Healing and growth", toneType: 'Sine' },
-    'Samatva': { baseFreq: 639, leftFreq: 639, rightFreq: 645, description: "Brings Love & Compassion in Life - Emotional balance", toneType: 'Sine' },
-    'Gupta': { baseFreq: 741, leftFreq: 741, rightFreq: 747, description: "Detoxifies Cells & Organs - Purification", toneType: 'Triangle' },
-    'Jyoti': { baseFreq: 852, leftFreq: 852, rightFreq: 858, description: "Awakens Intuition, Raises Energy - Insight and vitality", toneType: 'Square' },
-    'Tejas': { baseFreq: 963, leftFreq: 963, rightFreq: 969, description: "Connects to Higher Self - Spiritual connection", toneType: 'Sine' },
-    'Sthira': { baseFreq: 1074, leftFreq: 1074, rightFreq: 1080, description: "Consciousness Expansion - Awareness and clarity", toneType: 'Sawtooth' },
-    'Ananta': { baseFreq: 1179, leftFreq: 1179, rightFreq: 1185, description: "Cosmic Connection - Universal harmony", toneType: 'Triangle' },
+    'Bhumi': { baseFreq: 7.83, leftFreq: 7.83, rightFreq: 11.83, description: "Earth's vibration - Grounding and stability", toneType: 'Sine', solfeggioBase: 174 },
+    'Pravaha': { baseFreq: 174, leftFreq: 174, rightFreq: 178, description: "Relieves Pain & Stress - Calming and soothing", toneType: 'Sine', solfeggioBase: 174 },
+    'Shanta': { baseFreq: 285, leftFreq: 285, rightFreq: 291, description: "Heals Tissues & Organs - Restorative energy", toneType: 'Sine', solfeggioBase: 285 },
+    'Arogya': { baseFreq: 396, leftFreq: 396, rightFreq: 402, description: "Eliminates Fear - Courage and confidence", toneType: 'Square', solfeggioBase: 396 },
+    'Chapala': { baseFreq: 417, leftFreq: 417, rightFreq: 423, description: "Wipes out Negativity - Cleansing and renewal", toneType: 'Sawtooth', solfeggioBase: 417 },
+    'Matri': { baseFreq: 528, leftFreq: 528, rightFreq: 534, description: "Repairs DNA, Brings Positive Transformation - Healing and growth", toneType: 'Sine', solfeggioBase: 528 },
+    'Samatva': { baseFreq: 639, leftFreq: 639, rightFreq: 645, description: "Brings Love & Compassion in Life - Emotional balance", toneType: 'Sine', solfeggioBase: 639 },
+    'Gupta': { baseFreq: 741, leftFreq: 741, rightFreq: 747, description: "Detoxifies Cells & Organs - Purification", toneType: 'Triangle', solfeggioBase: 741 },
+    'Jyoti': { baseFreq: 852, leftFreq: 852, rightFreq: 858, description: "Awakens Intuition, Raises Energy - Insight and vitality", toneType: 'Square', solfeggioBase: 852 },
+    'Tejas': { baseFreq: 963, leftFreq: 963, rightFreq: 969, description: "Connects to Higher Self - Spiritual connection", toneType: 'Sine', solfeggioBase: 963 },
+    'Sthira': { baseFreq: 1074, leftFreq: 1074, rightFreq: 1080, description: "Consciousness Expansion - Awareness and clarity", toneType: 'Sawtooth', solfeggioBase: 1074 },
+    'Ananta': { baseFreq: 1179, leftFreq: 1179, rightFreq: 1185, description: "Cosmic Connection - Universal harmony", toneType: 'Triangle', solfeggioBase: 1179 },
   };
 
   // Sync frequencies and tone with selected Nada
@@ -73,13 +73,8 @@ const Basics = () => {
         const script = document.createElement('script');
         script.src = 'https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js';
         script.async = true;
-        script.onload = () => {
-          console.log('p5.js loaded successfully');
-          setP5Loaded(true);
-        };
-        script.onerror = () => {
-          console.error('Failed to load p5.js');
-        };
+        script.onload = () => setP5Loaded(true);
+        script.onerror = () => console.error('Failed to load p5.js');
         document.head.appendChild(script);
       } else if (window.p5) {
         setP5Loaded(true);
@@ -97,102 +92,40 @@ const Basics = () => {
   // Initialize AudioContext and Oscillators
   const setupAudio = () => {
     if (!audioContextRef.current) {
-      audioContextRef.current = new AudioContext();
-      gainNodeRef.current = audioContextRef.current.createGain();
-      gainNodeRef.current.gain.setValueAtTime(volume / 100, audioContextRef.current.currentTime);
-      gainNodeRef.current.connect(audioContextRef.current.destination);
-
-      leftPannerRef.current = audioContextRef.current.createStereoPanner();
-      leftPannerRef.current.pan.setValueAtTime(-1, audioContextRef.current.currentTime);
-      leftPannerRef.current.connect(gainNodeRef.current);
-
-      rightPannerRef.current = audioContextRef.current.createStereoPanner();
-      rightPannerRef.current.pan.setValueAtTime(1, audioContextRef.current.currentTime);
-      rightPannerRef.current.connect(gainNodeRef.current);
-
-      bgGainNodeRef.current = audioContextRef.current.createGain();
-      bgGainNodeRef.current.gain.setValueAtTime(0.3, audioContextRef.current.currentTime);
-      bgGainNodeRef.current.connect(audioContextRef.current.destination);
+      audioContextRef.current = new Tone.Context();
+      gainNodeRef.current = new Tone.Gain(volume / 100).toDestination();
+      leftPannerRef.current = new Tone.Panner(-1).connect(gainNodeRef.current);
+      rightPannerRef.current = new Tone.Panner(1).connect(gainNodeRef.current);
     }
   };
 
   const startAudio = () => {
     setupAudio();
-    if (!audioContextRef.current) return;
+    if (!audioContextRef.current || !gainNodeRef.current) return;
 
     if (!leftOscillatorRef.current && !rightOscillatorRef.current && !isPlaying) {
-      leftOscillatorRef.current = audioContextRef.current.createOscillator();
-      leftOscillatorRef.current.type = freqRef.current.toneType.toLowerCase() as OscillatorType;
-      leftOscillatorRef.current.frequency.setValueAtTime(freqRef.current.leftFreq, audioContextRef.current.currentTime);
-      leftOscillatorRef.current.connect(leftPannerRef.current!);
-      leftOscillatorRef.current.start();
+      leftOscillatorRef.current = new Tone.Oscillator(freqRef.current.leftFreq, freqRef.current.toneType.toLowerCase()).connect(leftPannerRef.current!).start();
+      rightOscillatorRef.current = new Tone.Oscillator(freqRef.current.rightFreq, freqRef.current.toneType.toLowerCase()).connect(rightPannerRef.current!).start();
 
-      rightOscillatorRef.current = audioContextRef.current.createOscillator();
-      rightOscillatorRef.current.type = freqRef.current.toneType.toLowerCase() as OscillatorType;
-      rightOscillatorRef.current.frequency.setValueAtTime(freqRef.current.rightFreq, audioContextRef.current.currentTime);
-      rightOscillatorRef.current.connect(rightPannerRef.current!);
-      rightOscillatorRef.current.start();
-
-      // Background music with overtones
-      const baseFreq = freqRef.current.leftFreq * 2;
-      const tempo = selectedMood === 'Calm' ? 0.5 : selectedMood === 'Energetic' ? 2 : 1;
-      const duration = 4 / tempo;
-      bgOscillatorsRef.current = [
-        audioContextRef.current.createOscillator(),
-        audioContextRef.current.createOscillator(),
-        audioContextRef.current.createOscillator()
-      ];
-      bgStopTimesRef.current = [];
-      bgOscillatorsRef.current.forEach((osc, i) => {
-        if (osc && audioContextRef.current) {
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(baseFreq * (i + 1), audioContextRef.current.currentTime);
-          const gain = audioContextRef.current.createGain();
-          gain.gain.setValueAtTime(0.3 / (i + 1), audioContextRef.current.currentTime);
-          gain.gain.linearRampToValueAtTime(0, audioContextRef.current.currentTime + 1 / tempo);
-          gain.gain.linearRampToValueAtTime(0.3 / (i + 1), audioContextRef.current.currentTime + 2 / tempo);
-          osc.connect(gain);
-          gain.connect(bgGainNodeRef.current!);
-          osc.start();
-          osc.stop(audioContextRef.current.currentTime + duration);
-          bgStopTimesRef.current[i] = audioContextRef.current.currentTime + duration;
-        }
-      });
-
-      setInterval(() => {
-        if (isPlaying && audioContextRef.current && bgStopTimesRef.current.every(stopTime => audioContextRef.current!.currentTime >= stopTime)) {
-          bgOscillatorsRef.current.forEach(osc => osc?.stop());
-          bgOscillatorsRef.current = bgOscillatorsRef.current.map(() => null);
-          const newOscillators = [
-            audioContextRef.current.createOscillator(),
-            audioContextRef.current.createOscillator(),
-            audioContextRef.current.createOscillator()
-          ];
-          bgStopTimesRef.current = [];
-          newOscillators.forEach((osc, i) => {
-            if (osc && audioContextRef.current) {
-              osc.type = 'sine';
-              osc.frequency.setValueAtTime(baseFreq * (i + 1), audioContextRef.current.currentTime);
-              const gain = audioContextRef.current.createGain();
-              gain.gain.setValueAtTime(0, audioContextRef.current.currentTime);
-              gain.gain.linearRampToValueAtTime(0.3 / (i + 1), audioContextRef.current.currentTime + 0.5 / tempo);
-              osc.connect(gain);
-              gain.connect(bgGainNodeRef.current!);
-              osc.start();
-              osc.stop(audioContextRef.current.currentTime + duration);
-              bgStopTimesRef.current[i] = audioContextRef.current.currentTime + duration;
-            }
-          });
-          bgOscillatorsRef.current = newOscillators;
-        }
-      }, 1000 / tempo);
+      // Background music with tone.js
+      const tempo = selectedMood === 'Calm' ? 60 : selectedMood === 'Energetic' ? 80 : 70;
+      Tone.Transport.bpm.value = tempo;
+      bgSynthRef.current = new Tone.PolySynth(Tone.Synth).toDestination();
+      const solfeggioBase = nadaPresets[selectedNada].solfeggioBase;
+      const harmonics = [solfeggioBase, solfeggioBase * 2, solfeggioBase * 3];
+      const sequence = new Tone.Part(((time, note) => {
+        bgSynthRef.current!.triggerAttackRelease(note, '2n', time, 0.5);
+      }), harmonics.map(freq => [0, freq])).start(0);
+      sequence.loop = true;
+      sequence.loopEnd = '1m';
+      Tone.Transport.start();
     }
     setIsPlaying(true);
   };
 
   const pauseAudio = () => {
     if (audioContextRef.current) {
-      audioContextRef.current.suspend();
+      Tone.Transport.pause();
       setIsPlaying(false);
     }
   };
@@ -203,70 +136,48 @@ const Basics = () => {
       rightOscillatorRef.current.stop();
       leftOscillatorRef.current = null;
       rightOscillatorRef.current = null;
-      bgOscillatorsRef.current.forEach(osc => osc?.stop());
-      bgOscillatorsRef.current = [];
-      bgStopTimesRef.current = [];
+      if (bgSynthRef.current) bgSynthRef.current.releaseAll();
+      Tone.Transport.stop();
       leftSketchRefInstance.current?.remove();
       rightSketchRefInstance.current?.remove();
-      discSketchRefInstance.current?.remove();
+      thirdEyeSketchRefInstance.current?.remove();
       mandalaSketchRefInstance.current?.remove();
       leftSketchRefInstance.current = null;
       rightSketchRefInstance.current = null;
-      discSketchRefInstance.current = null;
+      thirdEyeSketchRefInstance.current = null;
       mandalaSketchRefInstance.current = null;
     }
     setIsPlaying(false);
   };
 
-  // Update volume and frequency in real-time
+  // Update volume in real-time
   React.useEffect(() => {
-    if (leftOscillatorRef.current && audioContextRef.current) {
-      leftOscillatorRef.current.frequency.setValueAtTime(freqRef.current.leftFreq, audioContextRef.current.currentTime);
-    }
-    if (rightOscillatorRef.current && audioContextRef.current) {
-      rightOscillatorRef.current.frequency.setValueAtTime(freqRef.current.rightFreq, audioContextRef.current.currentTime);
-    }
-    if (gainNodeRef.current && audioContextRef.current) {
-      gainNodeRef.current.gain.setValueAtTime(volume / 100, audioContextRef.current.currentTime);
-    }
-  }, [volume, freqRef.current.leftFreq, freqRef.current.rightFreq]);
+    if (gainNodeRef.current) gainNodeRef.current.gain.value = volume / 100;
+  }, [volume]);
 
   React.useEffect(() => {
     if (leftOscillatorRef.current && rightOscillatorRef.current) {
-      leftOscillatorRef.current.type = freqRef.current.toneType.toLowerCase() as OscillatorType;
-      rightOscillatorRef.current.type = freqRef.current.toneType.toLowerCase() as OscillatorType;
+      leftOscillatorRef.current.type = freqRef.current.toneType.toLowerCase();
+      rightOscillatorRef.current.type = freqRef.current.toneType.toLowerCase();
     }
   }, [freqRef.current.toneType]);
 
   // Initialize p5.js sketches
   React.useEffect(() => {
-    if (!p5Loaded || !window.p5) {
-      console.log('p5.js not loaded yet');
-      return;
-    }
+    if (!p5Loaded || !window.p5) return;
 
-    if (!leftSketchRef.current || !rightSketchRef.current || !discSketchRef.current || !mandalaSketchRef.current) {
-      console.error('One or more refs not ready');
-      return;
-    }
+    if (!leftSketchRef.current || !rightSketchRef.current || !thirdEyeSketchRef.current || !mandalaSketchRef.current) return;
 
     const initializeSketches = () => {
-      console.log('Initializing sketches');
-
       const getWaveformValue = (p: any, x: number, freq: number, toneType: string, phase: number, amplitude: number) => {
         const t = x * 0.1 + phase;
         const scaledFreq = freq / 174;
         switch (toneType.toLowerCase()) {
-          case 'sine':
-            return p.sin(t * scaledFreq) * amplitude;
-          case 'square':
-            return p.sin(t * scaledFreq) > 0 ? amplitude : -amplitude;
-          case 'sawtooth':
-            return ((t * scaledFreq) % p.TWO_PI) / p.PI * amplitude - amplitude;
-          case 'triangle':
-            return (2 / p.PI) * p.asin(p.sin(t * scaledFreq)) * amplitude;
-          default:
-            return p.sin(t * scaledFreq) * amplitude;
+          case 'sine': return p.sin(t * scaledFreq) * amplitude;
+          case 'square': return p.sin(t * scaledFreq) > 0 ? amplitude : -amplitude;
+          case 'sawtooth': return ((t * scaledFreq) % p.TWO_PI) / p.PI * amplitude - amplitude;
+          case 'triangle': return (2 / p.PI) * p.asin(p.sin(t * scaledFreq)) * amplitude;
+          default: return p.sin(t * scaledFreq) * amplitude;
         }
       };
 
@@ -274,33 +185,9 @@ const Basics = () => {
       if (!leftSketchRefInstance.current) {
         const sketch = (p: any) => {
           let canvasWidth = leftSketchRef.current!.offsetWidth;
-          p.setup = () => {
-            p.createCanvas(canvasWidth, 150).parent(leftSketchRef.current!);
-            p.background(255);
-            console.log('Left sketch setup, width:', canvasWidth);
-          };
-
-          p.draw = () => {
-            if (isPlaying) {
-              p.background(255);
-              p.stroke(255, 99, 71);
-              p.strokeWeight(2);
-              const amplitude = (volume / 100) * 50;
-              for (let x = 0; x < p.width; x++) {
-                let y = p.height / 2 + getWaveformValue(p, x, freqRef.current.leftFreq, freqRef.current.toneType, p.frameCount * 0.05, amplitude);
-                p.point(x, y);
-              }
-              console.log('Left sketch drawing, leftFreq:', freqRef.current.leftFreq, 'volume:', volume, 'toneType:', freqRef.current.toneType);
-            } else {
-              p.background(255);
-            }
-          };
-
-          p.windowResized = () => {
-            canvasWidth = leftSketchRef.current!.offsetWidth;
-            p.resizeCanvas(canvasWidth, 150);
-            console.log('Left sketch resized, new width:', canvasWidth);
-          };
+          p.setup = () => p.createCanvas(canvasWidth, 150).parent(leftSketchRef.current!);
+          p.draw = () => { if (isPlaying) { p.background(255); p.stroke(255, 99, 71); p.strokeWeight(2); const amplitude = (volume / 100) * 50; for (let x = 0; x < p.width; x++) p.point(x, p.height / 2 + getWaveformValue(p, x, freqRef.current.leftFreq, freqRef.current.toneType, p.frameCount * 0.05, amplitude)); } else p.background(255); };
+          p.windowResized = () => { canvasWidth = leftSketchRef.current!.offsetWidth; p.resizeCanvas(canvasWidth, 150); };
         };
         leftSketchRefInstance.current = new window.p5(sketch);
       }
@@ -309,192 +196,52 @@ const Basics = () => {
       if (!rightSketchRefInstance.current) {
         const sketch = (p: any) => {
           let canvasWidth = rightSketchRef.current!.offsetWidth;
-          p.setup = () => {
-            p.createCanvas(canvasWidth, 150).parent(rightSketchRef.current!);
-            p.background(255);
-            console.log('Right sketch setup, width:', canvasWidth);
-          };
-
-          p.draw = () => {
-            if (isPlaying) {
-              p.background(255);
-              p.stroke(135, 206, 250);
-              p.strokeWeight(2);
-              const amplitude = (volume / 100) * 50;
-              for (let x = 0; x < p.width; x++) {
-                let y = p.height / 2 + getWaveformValue(p, x, freqRef.current.rightFreq, freqRef.current.toneType, p.frameCount * 0.05, amplitude);
-                p.point(x, y);
-              }
-              console.log('Right sketch drawing, rightFreq:', freqRef.current.rightFreq, 'volume:', volume, 'toneType:', freqRef.current.toneType);
-            } else {
-              p.background(255);
-            }
-          };
-
-          p.windowResized = () => {
-            canvasWidth = rightSketchRef.current!.offsetWidth;
-            p.resizeCanvas(canvasWidth, 150);
-            console.log('Right sketch resized, new width:', canvasWidth);
-          };
+          p.setup = () => p.createCanvas(canvasWidth, 150).parent(rightSketchRef.current!);
+          p.draw = () => { if (isPlaying) { p.background(255); p.stroke(135, 206, 250); p.strokeWeight(2); const amplitude = (volume / 100) * 50; for (let x = 0; x < p.width; x++) p.point(x, p.height / 2 + getWaveformValue(p, x, freqRef.current.rightFreq, freqRef.current.toneType, p.frameCount * 0.05, amplitude)); } else p.background(255); };
+          p.windowResized = () => { canvasWidth = rightSketchRef.current!.offsetWidth; p.resizeCanvas(canvasWidth, 150); };
         };
         rightSketchRefInstance.current = new window.p5(sketch);
       }
 
-      // Hypnotic Spiraling Disc
-      if (!discSketchRefInstance.current) {
+      // Third Eye Visualization
+      if (!thirdEyeSketchRefInstance.current) {
         const sketch = (p: any) => {
-          let canvasWidth = discSketchRef.current!.offsetWidth;
-          p.setup = () => {
-            p.createCanvas(canvasWidth, 150).parent(discSketchRef.current!);
-            p.background(255);
-            console.log('Disc sketch setup, width:', canvasWidth);
-          };
-
+          let canvasWidth = thirdEyeSketchRef.current!.offsetWidth;
+          p.setup = () => p.createCanvas(canvasWidth, 150).parent(thirdEyeSketchRef.current!);
           p.draw = () => {
             if (isPlaying) {
-              p.background(255);
+              p.background(0);
               const centerX = p.width / 2;
               const centerY = p.height / 2;
-              const radius = p.min(p.width, p.height) * 0.4;
+              const baseRadius = p.min(p.width, p.height) * 0.3;
               const speed = (freqRef.current.leftFreq / 100) * 0.01;
-
               p.translate(centerX, centerY);
               p.rotate(p.frameCount * speed);
 
-              let color, spiralDensity;
-              switch (selectedNada) {
-                case 'Bhumi':
-                  color = p.color(34, 139, 34);
-                  spiralDensity = 10;
-                  break;
-                case 'Pravaha':
-                  color = p.color(173, 216, 230);
-                  spiralDensity = 12;
-                  break;
-                case 'Shanta':
-                  color = p.color(144, 238, 144);
-                  spiralDensity = 14;
-                  break;
-                case 'Arogya':
-                  color = p.color(255, 165, 0);
-                  spiralDensity = 16;
-                  break;
-                case 'Chapala':
-                  color = p.color(255, 182, 193);
-                  spiralDensity = 18;
-                  break;
-                case 'Matri':
-                  color = p.color(255, 215, 0);
-                  spiralDensity = 20;
-                  break;
-                case 'Samatva':
-                  color = p.color(221, 160, 221);
-                  spiralDensity = 22;
-                  break;
-                case 'Gupta':
-                  color = p.color(135, 206, 235);
-                  spiralDensity = 24;
-                  break;
-                case 'Jyoti':
-                  color = p.color(255, 255, 0);
-                  spiralDensity = 26;
-                  break;
-                case 'Tejas':
-                  color = p.color(255, 99, 71);
-                  spiralDensity = 28;
-                  break;
-                case 'Sthira':
-                  color = p.color(186, 85, 211);
-                  spiralDensity = 30;
-                  break;
-                case 'Ananta':
-                  color = p.color(0, 191, 255);
-                  spiralDensity = 32;
-                  break;
-                default:
-                  color = p.color(0);
-                  spiralDensity = 15;
+              const scaleFactor = p.sin(p.frameCount * 0.05) * 0.2 + 1; // Optical illusion effect
+              for (let i = 0; i < 5; i++) {
+                p.stroke(p.lerpColor(p.color(0, 255, 255), p.color(255, 0, 255), i / 5));
+                p.noFill();
+                const radius = baseRadius * (i + 1) * scaleFactor;
+                p.ellipse(0, 0, radius, radius);
               }
-
-              p.stroke(color);
-              p.noFill();
-              for (let i = 0; i < spiralDensity; i++) {
-                let angle = p.map(i, 0, spiralDensity, 0, p.TWO_PI * 2);
-                let r = radius * (i / spiralDensity);
-                let x = r * p.cos(angle);
-                let y = r * p.sin(angle);
-                p.line(0, 0, x, y);
-              }
-
-              console.log('Disc sketch drawing, nada:', selectedNada, 'speed:', speed);
-            } else {
-              p.background(255);
-            }
+              p.fill(255);
+              p.noStroke();
+              p.ellipse(0, 0, 10, 10); // Central focus point
+            } else p.background(0);
           };
-
-          p.windowResized = () => {
-            canvasWidth = discSketchRef.current!.offsetWidth;
-            p.resizeCanvas(canvasWidth, 150);
-            console.log('Disc sketch resized, new width:', canvasWidth);
-          };
+          p.windowResized = () => { canvasWidth = thirdEyeSketchRef.current!.offsetWidth; p.resizeCanvas(canvasWidth, 150); };
         };
-        discSketchRefInstance.current = new window.p5(sketch);
+        thirdEyeSketchRefInstance.current = new window.p5(sketch);
       }
 
       // Sacred Geometry Mandala
       if (!mandalaSketchRefInstance.current) {
         const sketch = (p: any) => {
           let canvasWidth = mandalaSketchRef.current!.offsetWidth;
-          p.setup = () => {
-            p.createCanvas(canvasWidth, 300).parent(mandalaSketchRef.current!);
-            p.background(255);
-            console.log('Mandala sketch setup, width:', canvasWidth);
-          };
-
-          p.draw = () => {
-            if (isPlaying) {
-              p.background(255);
-              p.stroke(0);
-              p.strokeWeight(1);
-              const beatFreq = Math.abs(freqRef.current.rightFreq - freqRef.current.leftFreq);
-              const baseRadius = 50 + (beatFreq / 10);
-              const amplitude = (volume / 100) * 50;
-              const rotation = p.frameCount * (freqRef.current.leftFreq / 1000);
-
-              const numCircles = Math.floor(beatFreq / 10) + 3;
-              const innerScale = freqRef.current.toneType === 'Sine' ? 0.5 : 
-                               freqRef.current.toneType === 'Square' ? 0.4 : 
-                               freqRef.current.toneType === 'Sawtooth' ? 0.6 : 0.45;
-
-              p.push();
-              p.translate(p.width / 2, p.height / 2);
-              p.rotate(rotation);
-
-              for (let i = 0; i < numCircles; i++) {
-                let angle = p.TWO_PI / numCircles * i;
-                let x = p.cos(angle) * baseRadius;
-                let y = p.sin(angle) * baseRadius;
-                p.ellipse(x, y, baseRadius * 0.5, baseRadius * 0.5);
-                for (let j = 0; j < 6; j++) {
-                  let innerAngle = p.TWO_PI / 6 * j;
-                  let innerX = x + p.cos(innerAngle) * (baseRadius * innerScale);
-                  let innerY = y + p.sin(innerAngle) * (baseRadius * innerScale);
-                  p.ellipse(innerX, innerY, baseRadius * innerScale * 0.6, baseRadius * innerScale * 0.6);
-                }
-              }
-              p.pop();
-
-              console.log('Mandala sketch drawing, beatFreq:', beatFreq, 'volume:', volume, 'toneType:', freqRef.current.toneType);
-            } else {
-              p.background(255);
-            }
-          };
-
-          p.windowResized = () => {
-            canvasWidth = mandalaSketchRef.current!.offsetWidth;
-            p.resizeCanvas(canvasWidth, 300);
-            console.log('Mandala sketch resized, new width:', canvasWidth);
-          };
+          p.setup = () => p.createCanvas(canvasWidth, 300).parent(mandalaSketchRef.current!);
+          p.draw = () => { if (isPlaying) { p.background(255); p.stroke(0); p.strokeWeight(1); const beatFreq = Math.abs(freqRef.current.rightFreq - freqRef.current.leftFreq); const baseRadius = 50 + (beatFreq / 10); const rotation = p.frameCount * (freqRef.current.leftFreq / 1000); const numCircles = Math.floor(beatFreq / 10) + 3; const innerScale = ['Sine', 'Square', 'Sawtooth', 'Triangle'].indexOf(freqRef.current.toneType) / 3 * 0.2 + 0.4; p.push(); p.translate(p.width / 2, p.height / 2); p.rotate(rotation); for (let i = 0; i < numCircles; i++) { let angle = p.TWO_PI / numCircles * i; let x = p.cos(angle) * baseRadius; let y = p.sin(angle) * baseRadius; p.ellipse(x, y, baseRadius * 0.5, baseRadius * 0.5); for (let j = 0; j < 6; j++) { let innerAngle = p.TWO_PI / 6 * j; let innerX = x + p.cos(innerAngle) * (baseRadius * innerScale); let innerY = y + p.sin(innerAngle) * (baseRadius * innerScale); p.ellipse(innerX, innerY, baseRadius * innerScale * 0.6, baseRadius * innerScale * 0.6); } } p.pop(); } else p.background(255); };
+          p.windowResized = () => { canvasWidth = mandalaSketchRef.current!.offsetWidth; p.resizeCanvas(canvasWidth, 300); };
         };
         mandalaSketchRefInstance.current = new window.p5(sketch);
       }
@@ -505,11 +252,11 @@ const Basics = () => {
     return () => {
       leftSketchRefInstance.current?.remove();
       rightSketchRefInstance.current?.remove();
-      discSketchRefInstance.current?.remove();
+      thirdEyeSketchRefInstance.current?.remove();
       mandalaSketchRefInstance.current?.remove();
       leftSketchRefInstance.current = null;
       rightSketchRefInstance.current = null;
-      discSketchRefInstance.current = null;
+      thirdEyeSketchRefInstance.current = null;
       mandalaSketchRefInstance.current = null;
     };
   }, [p5Loaded, isPlaying]);
@@ -520,28 +267,17 @@ const Basics = () => {
         <h1 className="text-xl sm:text-2xl font-bold mb-4 text-gray-800">{selectedNada}</h1>
         <p className="text-sm text-gray-600 mb-4">{nadaPresets[selectedNada].description}</p>
 
-        {/* Selections */}
         <div className="space-y-4 mb-6">
           <div>
             <label className="block text-gray-700 text-sm sm:text-base">Select Nada</label>
-            <select
-              value={selectedNada}
-              onChange={(e) => setSelectedNada(e.target.value as NadaName)}
-              className="w-full p-2 border border-gray-300 rounded-lg bg-white text-gray-800 shadow-inner text-sm sm:text-base"
-            >
-              {(Object.keys(nadaPresets) as NadaName[]).map((nada) => (
-                <option key={nada} value={nada}>{nada}</option>
-              ))}
+            <select value={selectedNada} onChange={(e) => setSelectedNada(e.target.value as NadaName)} className="w-full p-2 border border-gray-300 rounded-lg bg-white text-gray-800 shadow-inner text-sm sm:text-base">
+              {(Object.keys(nadaPresets) as NadaName[]).map((nada) => <option key={nada} value={nada}>{nada}</option>)}
             </select>
           </div>
 
           <div>
             <label className="block text-gray-700 text-sm sm:text-base">Select Mood for Background Music</label>
-            <select
-              value={selectedMood}
-              onChange={(e) => setSelectedMood(e.target.value as Mood)}
-              className="w-full p-2 border border-gray-300 rounded-lg bg-white text-gray-800 shadow-inner text-sm sm:text-base"
-            >
+            <select value={selectedMood} onChange={(e) => setSelectedMood(e.target.value as Mood)} className="w-full p-2 border border-gray-300 rounded-lg bg-white text-gray-800 shadow-inner text-sm sm:text-base">
               <option>Calm</option>
               <option>Energetic</option>
               <option>Meditative</option>
@@ -550,75 +286,37 @@ const Basics = () => {
 
           <div>
             <label className="block text-gray-700 text-sm sm:text-base">Volume: {volume}%</label>
-            <SliderPrimitive.Root
-              value={[volume]}
-              onValueChange={(value) => setVolume(value[0])}
-              max={100}
-              step={1}
-              className="relative flex items-center w-full mt-2"
-            >
-              <SliderPrimitive.Track className="bg-gray-300 h-2 w-full rounded-full">
-                <SliderPrimitive.Range className="absolute bg-blue-500 h-full rounded-full" />
-              </SliderPrimitive.Track>
+            <SliderPrimitive.Root value={[volume]} onValueChange={(value) => setVolume(value[0])} max={100} step={1} className="relative flex items-center w-full mt-2">
+              <SliderPrimitive.Track className="bg-gray-300 h-2 w-full rounded-full"><SliderPrimitive.Range className="absolute bg-blue-500 h-full rounded-full" /></SliderPrimitive.Track>
               <SliderPrimitive.Thumb className="block w-5 h-5 bg-blue-500 rounded-full focus:outline-none shadow" />
             </SliderPrimitive.Root>
           </div>
         </div>
 
-        {/* Buttons */}
         <div className="flex flex-wrap gap-3 mb-6">
-          <button
-            onClick={isPlaying ? pauseAudio : startAudio}
-            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition duration-200 shadow-md text-sm sm:text-base"
-          >
-            {isPlaying ? 'Pause' : 'Play'}
-          </button>
-          <button
-            onClick={stopAudio}
-            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition duration-200 shadow-md text-sm sm:text-base"
-          >
-            Stop
-          </button>
+          <button onClick={isPlaying ? pauseAudio : startAudio} className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition duration-200 shadow-md text-sm sm:text-base">{isPlaying ? 'Pause' : 'Play'}</button>
+          <button onClick={stopAudio} className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition duration-200 shadow-md text-sm sm:text-base">Stop</button>
         </div>
 
-        {/* Left and Right Waveforms Side by Side */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           <div className="p-4 bg-gray-50 rounded-lg shadow-inner">
             <label className="block font-semibold text-sm text-gray-700">Left Ear Waveform</label>
-            <div
-              ref={leftSketchRef}
-              className="border-2 border-gray-200 rounded-lg overflow-hidden w-full"
-              style={{ position: 'relative', height: '150px' }}
-            ></div>
+            <div ref={leftSketchRef} className="border-2 border-gray-200 rounded-lg overflow-hidden w-full" style={{ position: 'relative', height: '150px' }}></div>
           </div>
           <div className="p-4 bg-gray-50 rounded-lg shadow-inner">
             <label className="block font-semibold text-sm text-gray-700">Right Ear Waveform</label>
-            <div
-              ref={rightSketchRef}
-              className="border-2 border-gray-200 rounded-lg overflow-hidden w-full"
-              style={{ position: 'relative', height: '150px' }}
-            ></div>
+            <div ref={rightSketchRef} className="border-2 border-gray-200 rounded-lg overflow-hidden w-full" style={{ position: 'relative', height: '150px' }}></div>
           </div>
         </div>
 
-        {/* Hypnotic Spiraling Disc */}
         <div className="p-4 bg-gray-50 rounded-lg shadow-inner mb-6">
-          <label className="block font-semibold text-sm text-gray-700">Hypnotic Focus Disc</label>
-          <div
-            ref={discSketchRef}
-            className="border-2 border-gray-200 rounded-lg overflow-hidden w-full"
-            style={{ position: 'relative', height: '150px' }}
-          ></div>
+          <label className="block font-semibold text-sm text-gray-700">Third Eye</label>
+          <div ref={thirdEyeSketchRef} className="border-2 border-gray-200 rounded-lg overflow-hidden w-full" style={{ position: 'relative', height: '150px' }}></div>
         </div>
 
-        {/* Sacred Geometry Mandala */}
         <div className="p-4 bg-gray-50 rounded-lg shadow-inner">
           <label className="block font-semibold text-sm text-gray-700">Sacred Geometry Mandala</label>
-          <div
-            ref={mandalaSketchRef}
-            className="border-2 border-gray-200 rounded-lg overflow-hidden w-full"
-            style={{ position: 'relative', height: '300px' }}
-          ></div>
+          <div ref={mandalaSketchRef} className="border-2 border-gray-200 rounded-lg overflow-hidden w-full" style={{ position: 'relative', height: '300px' }}></div>
         </div>
       </div>
     </div>
