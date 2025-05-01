@@ -44,6 +44,9 @@ const Basics = () => {
   const rightPannerRef = React.useRef<any>(null);
   const gainNodeRef = React.useRef<any>(null);
   const bgSynthRef = React.useRef<any>(null);
+  const sequenceRef = React.useRef<any>(null);
+  const rainPlayerRef = React.useRef<any>(null);
+  const reverbRef = React.useRef<any>(null);
   const leftSketchRefInstance = React.useRef<any>(null);
   const rightSketchRefInstance = React.useRef<any>(null);
   const thirdEyeSketchRefInstance = React.useRef<any>(null);
@@ -102,6 +105,7 @@ const Basics = () => {
       gainNodeRef.current = new Tone.Gain(volume / 100).toDestination();
       leftPannerRef.current = new Tone.Panner(-1).connect(gainNodeRef.current);
       rightPannerRef.current = new Tone.Panner(1).connect(gainNodeRef.current);
+      reverbRef.current = new Tone.Reverb({ decay: 5, wet: 0.3 }).toDestination();
       console.log('Audio context and nodes set up');
     }
   };
@@ -141,19 +145,46 @@ const Basics = () => {
         rightOscillatorRef.current = new Tone.Oscillator(freqRef.current.rightFreq, freqRef.current.toneType).connect(rightPannerRef.current!).start();
         console.log('Oscillators started');
 
-        // Background music with tone.js
-        const tempo = selectedMood === 'Calm' ? 60 : selectedMood === 'Energetic' ? 80 : 70;
+        // Background music with Chinese flute and rain
+        const tempo = selectedMood === 'Calm' ? 40 : selectedMood === 'Energetic' ? 60 : 50;
         Tone.Transport.bpm.value = tempo;
-        bgSynthRef.current = new Tone.PolySynth(Tone.Synth).toDestination();
+
+        // Initialize Sampler with Chinese flute samples
+        bgSynthRef.current = new Tone.Sampler({
+          urls: {
+            C4: "/sounds/flute-C4.mp3",
+            E4: "/sounds/flute-E4.mp3",
+            G4: "/sounds/flute-G4.mp3",
+          },
+          attack: 0.2,
+          release: 1.5,
+        }).connect(reverbRef.current);
+
+        // Initialize rain sound
+        rainPlayerRef.current = new Tone.Player({
+          url: "/sounds/rain-loop.mp3",
+          loop: true,
+          volume: -20, // Lower volume for rain
+        }).toDestination();
+        rainPlayerRef.current.start();
+
+        // Create a simple melody based on the solfeggio base
         const solfeggioBase = nadaPresets[selectedNada].solfeggioBase;
-        const harmonics = [solfeggioBase, solfeggioBase * 2, solfeggioBase * 3];
-        const sequence = new Tone.Part((time: number, note: number) => {
-          bgSynthRef.current!.triggerAttackRelease(note, '2n', time, 0.5);
-        }, harmonics.map(freq => [0, freq])).start(0);
-        sequence.loop = true;
-        sequence.loopEnd = '1m';
+        const notes = ["C4", "E4", "G4"];
+        const melody = notes.map((note, index) => ({
+          time: index * 2,
+          note: note,
+          duration: "2n",
+        }));
+
+        sequenceRef.current = new Tone.Part((time: number, event: { note: string; duration: string }) => {
+          bgSynthRef.current!.triggerAttackRelease(event.note, event.duration, time, 0.5);
+        }, melody).start(0);
+        sequenceRef.current.loop = true;
+        sequenceRef.current.loopEnd = notes.length * 2;
+
         Tone.Transport.start();
-        console.log('Background music started');
+        console.log('Background music and rain started');
       } catch (error) {
         console.error('Error starting oscillators or background music:', error);
       }
@@ -164,6 +195,7 @@ const Basics = () => {
   const pauseAudio = () => {
     if (Tone && audioContextRef.current) {
       Tone.Transport.pause();
+      if (rainPlayerRef.current) rainPlayerRef.current.stop();
       setIsPlaying(false);
       console.log('Audio paused');
     }
@@ -175,7 +207,26 @@ const Basics = () => {
       rightOscillatorRef.current.stop();
       leftOscillatorRef.current = null;
       rightOscillatorRef.current = null;
-      if (bgSynthRef.current) bgSynthRef.current.releaseAll();
+
+      // Clean up background music and rain
+      if (bgSynthRef.current) {
+        bgSynthRef.current.dispose();
+        bgSynthRef.current = null;
+      }
+      if (sequenceRef.current) {
+        sequenceRef.current.dispose();
+        sequenceRef.current = null;
+      }
+      if (rainPlayerRef.current) {
+        rainPlayerRef.current.stop();
+        rainPlayerRef.current.dispose();
+        rainPlayerRef.current = null;
+      }
+      if (reverbRef.current) {
+        reverbRef.current.dispose();
+        reverbRef.current = null;
+      }
+
       Tone.Transport.stop();
       leftSketchRefInstance.current?.remove();
       rightSketchRefInstance.current?.remove();
