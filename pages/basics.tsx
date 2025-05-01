@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import * as SliderPrimitive from '@radix-ui/react-slider';
-import * as Tone from 'tone';
 
 // Define Nada types
 type NadaName = 'Bhumi' | 'Pravaha' | 'Shanta' | 'Arogya' | 'Chapala' | 'Matri' | 'Samatva' | 'Gupta' | 'Jyoti' | 'Tejas' | 'Sthira' | 'Ananta';
@@ -11,7 +10,7 @@ type NadaPreset = {
   leftFreq: number;
   rightFreq: number;
   description: string;
-  toneType: Tone.ToneOscillatorType; // Updated to match Tone.js types
+  toneType: Tone.ToneOscillatorType;
   solfeggioBase: number;
 };
 type FreqRef = {
@@ -20,6 +19,9 @@ type FreqRef = {
   toneType: Tone.ToneOscillatorType;
 };
 type Mood = 'Calm' | 'Energetic' | 'Meditative';
+
+// Dynamically import Tone.js
+const Tone = typeof window !== 'undefined' ? require('tone') : null;
 
 const Basics = () => {
   const [selectedNada, setSelectedNada] = React.useState<NadaName>('Bhumi');
@@ -31,20 +33,20 @@ const Basics = () => {
   const rightSketchRef = React.useRef<HTMLDivElement>(null);
   const thirdEyeSketchRef = React.useRef<HTMLDivElement>(null);
   const mandalaSketchRef = React.useRef<HTMLDivElement>(null);
-  const audioContextRef = React.useRef<Tone.Context | null>(null);
-  const leftOscillatorRef = React.useRef<Tone.Oscillator | null>(null);
-  const rightOscillatorRef = React.useRef<Tone.Oscillator | null>(null);
-  const leftPannerRef = React.useRef<Tone.Panner | null>(null);
-  const rightPannerRef = React.useRef<Tone.Panner | null>(null);
-  const gainNodeRef = React.useRef<Tone.Gain | null>(null);
-  const bgSynthRef = React.useRef<Tone.PolySynth | null>(null);
+  const audioContextRef = React.useRef<any>(null); // Type adjusted for dynamic import
+  const leftOscillatorRef = React.useRef<any>(null);
+  const rightOscillatorRef = React.useRef<any>(null);
+  const leftPannerRef = React.useRef<any>(null);
+  const rightPannerRef = React.useRef<any>(null);
+  const gainNodeRef = React.useRef<any>(null);
+  const bgSynthRef = React.useRef<any>(null);
   const leftSketchRefInstance = React.useRef<any>(null);
   const rightSketchRefInstance = React.useRef<any>(null);
   const thirdEyeSketchRefInstance = React.useRef<any>(null);
   const mandalaSketchRefInstance = React.useRef<any>(null);
   const freqRef = React.useRef<FreqRef>({ leftFreq: 7.83, rightFreq: 11.83, toneType: 'sine' });
 
-  // Nada frequency presets with lowercase toneType
+  // Nada frequency presets
   const nadaPresets: Record<NadaName, NadaPreset> = {
     'Bhumi': { baseFreq: 7.83, leftFreq: 7.83, rightFreq: 11.83, description: "Earth's vibration - Grounding and stability", toneType: 'sine', solfeggioBase: 174 },
     'Pravaha': { baseFreq: 174, leftFreq: 174, rightFreq: 178, description: "Relieves Pain & Stress - Calming and soothing", toneType: 'sine', solfeggioBase: 174 },
@@ -91,7 +93,7 @@ const Basics = () => {
 
   // Initialize AudioContext and Oscillators
   const setupAudio = () => {
-    if (!audioContextRef.current) {
+    if (Tone && !audioContextRef.current) {
       audioContextRef.current = new Tone.Context();
       gainNodeRef.current = new Tone.Gain(volume / 100).toDestination();
       leftPannerRef.current = new Tone.Panner(-1).connect(gainNodeRef.current);
@@ -100,9 +102,9 @@ const Basics = () => {
   };
 
   const startAudio = () => {
-    setupAudio();
-    if (!audioContextRef.current || !gainNodeRef.current) return;
+    if (!Tone || !audioContextRef.current || !gainNodeRef.current) return;
 
+    setupAudio();
     if (!leftOscillatorRef.current && !rightOscillatorRef.current && !isPlaying) {
       leftOscillatorRef.current = new Tone.Oscillator(freqRef.current.leftFreq, freqRef.current.toneType).connect(leftPannerRef.current!).start();
       rightOscillatorRef.current = new Tone.Oscillator(freqRef.current.rightFreq, freqRef.current.toneType).connect(rightPannerRef.current!).start();
@@ -124,14 +126,14 @@ const Basics = () => {
   };
 
   const pauseAudio = () => {
-    if (audioContextRef.current) {
+    if (Tone && audioContextRef.current) {
       Tone.Transport.pause();
       setIsPlaying(false);
     }
   };
 
   const stopAudio = () => {
-    if (leftOscillatorRef.current && rightOscillatorRef.current) {
+    if (Tone && leftOscillatorRef.current && rightOscillatorRef.current) {
       leftOscillatorRef.current.stop();
       rightOscillatorRef.current.stop();
       leftOscillatorRef.current = null;
@@ -152,11 +154,11 @@ const Basics = () => {
 
   // Update volume in real-time
   React.useEffect(() => {
-    if (gainNodeRef.current) gainNodeRef.current.gain.value = volume / 100;
+    if (Tone && gainNodeRef.current) gainNodeRef.current.gain.value = volume / 100;
   }, [volume]);
 
   React.useEffect(() => {
-    if (leftOscillatorRef.current && rightOscillatorRef.current) {
+    if (Tone && leftOscillatorRef.current && rightOscillatorRef.current) {
       leftOscillatorRef.current.type = freqRef.current.toneType;
       rightOscillatorRef.current.type = freqRef.current.toneType;
     }
