@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import * as SliderPrimitive from '@radix-ui/react-slider';
-import * as Tone from 'tone'; // Import tone.js for advanced audio
+import * as Tone from 'tone';
 
 // Define Nada types
 type NadaName = 'Bhumi' | 'Pravaha' | 'Shanta' | 'Arogya' | 'Chapala' | 'Matri' | 'Samatva' | 'Gupta' | 'Jyoti' | 'Tejas' | 'Sthira' | 'Ananta';
@@ -11,13 +11,13 @@ type NadaPreset = {
   leftFreq: number;
   rightFreq: number;
   description: string;
-  toneType: string;
-  solfeggioBase: number; // Add Solfeggio base frequency
+  toneType: Tone.ToneOscillatorType; // Updated to match Tone.js types
+  solfeggioBase: number;
 };
 type FreqRef = {
   leftFreq: number;
   rightFreq: number;
-  toneType: string;
+  toneType: Tone.ToneOscillatorType;
 };
 type Mood = 'Calm' | 'Energetic' | 'Meditative';
 
@@ -29,9 +29,9 @@ const Basics = () => {
   const [selectedMood, setSelectedMood] = React.useState<Mood>('Calm');
   const leftSketchRef = React.useRef<HTMLDivElement>(null);
   const rightSketchRef = React.useRef<HTMLDivElement>(null);
-  const thirdEyeSketchRef = React.useRef<HTMLDivElement>(null); // Renamed from discSketchRef
+  const thirdEyeSketchRef = React.useRef<HTMLDivElement>(null);
   const mandalaSketchRef = React.useRef<HTMLDivElement>(null);
-  const audioContextRef = React.useRef<Tone.Context | null>(null); // Use Tone.Context
+  const audioContextRef = React.useRef<Tone.Context | null>(null);
   const leftOscillatorRef = React.useRef<Tone.Oscillator | null>(null);
   const rightOscillatorRef = React.useRef<Tone.Oscillator | null>(null);
   const leftPannerRef = React.useRef<Tone.Panner | null>(null);
@@ -40,24 +40,24 @@ const Basics = () => {
   const bgSynthRef = React.useRef<Tone.PolySynth | null>(null);
   const leftSketchRefInstance = React.useRef<any>(null);
   const rightSketchRefInstance = React.useRef<any>(null);
-  const thirdEyeSketchRefInstance = React.useRef<any>(null); // Renamed
+  const thirdEyeSketchRefInstance = React.useRef<any>(null);
   const mandalaSketchRefInstance = React.useRef<any>(null);
-  const freqRef = React.useRef<FreqRef>({ leftFreq: 7.83, rightFreq: 11.83, toneType: 'Sine' });
+  const freqRef = React.useRef<FreqRef>({ leftFreq: 7.83, rightFreq: 11.83, toneType: 'sine' });
 
-  // Nada frequency presets with Solfeggio bases
+  // Nada frequency presets with lowercase toneType
   const nadaPresets: Record<NadaName, NadaPreset> = {
-    'Bhumi': { baseFreq: 7.83, leftFreq: 7.83, rightFreq: 11.83, description: "Earth's vibration - Grounding and stability", toneType: 'Sine', solfeggioBase: 174 },
-    'Pravaha': { baseFreq: 174, leftFreq: 174, rightFreq: 178, description: "Relieves Pain & Stress - Calming and soothing", toneType: 'Sine', solfeggioBase: 174 },
-    'Shanta': { baseFreq: 285, leftFreq: 285, rightFreq: 291, description: "Heals Tissues & Organs - Restorative energy", toneType: 'Sine', solfeggioBase: 285 },
-    'Arogya': { baseFreq: 396, leftFreq: 396, rightFreq: 402, description: "Eliminates Fear - Courage and confidence", toneType: 'Square', solfeggioBase: 396 },
-    'Chapala': { baseFreq: 417, leftFreq: 417, rightFreq: 423, description: "Wipes out Negativity - Cleansing and renewal", toneType: 'Sawtooth', solfeggioBase: 417 },
-    'Matri': { baseFreq: 528, leftFreq: 528, rightFreq: 534, description: "Repairs DNA, Brings Positive Transformation - Healing and growth", toneType: 'Sine', solfeggioBase: 528 },
-    'Samatva': { baseFreq: 639, leftFreq: 639, rightFreq: 645, description: "Brings Love & Compassion in Life - Emotional balance", toneType: 'Sine', solfeggioBase: 639 },
-    'Gupta': { baseFreq: 741, leftFreq: 741, rightFreq: 747, description: "Detoxifies Cells & Organs - Purification", toneType: 'Triangle', solfeggioBase: 741 },
-    'Jyoti': { baseFreq: 852, leftFreq: 852, rightFreq: 858, description: "Awakens Intuition, Raises Energy - Insight and vitality", toneType: 'Square', solfeggioBase: 852 },
-    'Tejas': { baseFreq: 963, leftFreq: 963, rightFreq: 969, description: "Connects to Higher Self - Spiritual connection", toneType: 'Sine', solfeggioBase: 963 },
-    'Sthira': { baseFreq: 1074, leftFreq: 1074, rightFreq: 1080, description: "Consciousness Expansion - Awareness and clarity", toneType: 'Sawtooth', solfeggioBase: 1074 },
-    'Ananta': { baseFreq: 1179, leftFreq: 1179, rightFreq: 1185, description: "Cosmic Connection - Universal harmony", toneType: 'Triangle', solfeggioBase: 1179 },
+    'Bhumi': { baseFreq: 7.83, leftFreq: 7.83, rightFreq: 11.83, description: "Earth's vibration - Grounding and stability", toneType: 'sine', solfeggioBase: 174 },
+    'Pravaha': { baseFreq: 174, leftFreq: 174, rightFreq: 178, description: "Relieves Pain & Stress - Calming and soothing", toneType: 'sine', solfeggioBase: 174 },
+    'Shanta': { baseFreq: 285, leftFreq: 285, rightFreq: 291, description: "Heals Tissues & Organs - Restorative energy", toneType: 'sine', solfeggioBase: 285 },
+    'Arogya': { baseFreq: 396, leftFreq: 396, rightFreq: 402, description: "Eliminates Fear - Courage and confidence", toneType: 'square', solfeggioBase: 396 },
+    'Chapala': { baseFreq: 417, leftFreq: 417, rightFreq: 423, description: "Wipes out Negativity - Cleansing and renewal", toneType: 'sawtooth', solfeggioBase: 417 },
+    'Matri': { baseFreq: 528, leftFreq: 528, rightFreq: 534, description: "Repairs DNA, Brings Positive Transformation - Healing and growth", toneType: 'sine', solfeggioBase: 528 },
+    'Samatva': { baseFreq: 639, leftFreq: 639, rightFreq: 645, description: "Brings Love & Compassion in Life - Emotional balance", toneType: 'sine', solfeggioBase: 639 },
+    'Gupta': { baseFreq: 741, leftFreq: 741, rightFreq: 747, description: "Detoxifies Cells & Organs - Purification", toneType: 'triangle', solfeggioBase: 741 },
+    'Jyoti': { baseFreq: 852, leftFreq: 852, rightFreq: 858, description: "Awakens Intuition, Raises Energy - Insight and vitality", toneType: 'square', solfeggioBase: 852 },
+    'Tejas': { baseFreq: 963, leftFreq: 963, rightFreq: 969, description: "Connects to Higher Self - Spiritual connection", toneType: 'sine', solfeggioBase: 963 },
+    'Sthira': { baseFreq: 1074, leftFreq: 1074, rightFreq: 1080, description: "Consciousness Expansion - Awareness and clarity", toneType: 'sawtooth', solfeggioBase: 1074 },
+    'Ananta': { baseFreq: 1179, leftFreq: 1179, rightFreq: 1185, description: "Cosmic Connection - Universal harmony", toneType: 'triangle', solfeggioBase: 1179 },
   };
 
   // Sync frequencies and tone with selected Nada
@@ -104,8 +104,8 @@ const Basics = () => {
     if (!audioContextRef.current || !gainNodeRef.current) return;
 
     if (!leftOscillatorRef.current && !rightOscillatorRef.current && !isPlaying) {
-      leftOscillatorRef.current = new Tone.Oscillator(freqRef.current.leftFreq, freqRef.current.toneType.toLowerCase()).connect(leftPannerRef.current!).start();
-      rightOscillatorRef.current = new Tone.Oscillator(freqRef.current.rightFreq, freqRef.current.toneType.toLowerCase()).connect(rightPannerRef.current!).start();
+      leftOscillatorRef.current = new Tone.Oscillator(freqRef.current.leftFreq, freqRef.current.toneType).connect(leftPannerRef.current!).start();
+      rightOscillatorRef.current = new Tone.Oscillator(freqRef.current.rightFreq, freqRef.current.toneType).connect(rightPannerRef.current!).start();
 
       // Background music with tone.js
       const tempo = selectedMood === 'Calm' ? 60 : selectedMood === 'Energetic' ? 80 : 70;
@@ -157,8 +157,8 @@ const Basics = () => {
 
   React.useEffect(() => {
     if (leftOscillatorRef.current && rightOscillatorRef.current) {
-      leftOscillatorRef.current.type = freqRef.current.toneType.toLowerCase();
-      rightOscillatorRef.current.type = freqRef.current.toneType.toLowerCase();
+      leftOscillatorRef.current.type = freqRef.current.toneType;
+      rightOscillatorRef.current.type = freqRef.current.toneType;
     }
   }, [freqRef.current.toneType]);
 
@@ -218,7 +218,7 @@ const Basics = () => {
               p.translate(centerX, centerY);
               p.rotate(p.frameCount * speed);
 
-              const scaleFactor = p.sin(p.frameCount * 0.05) * 0.2 + 1; // Optical illusion effect
+              const scaleFactor = p.sin(p.frameCount * 0.05) * 0.2 + 1;
               for (let i = 0; i < 5; i++) {
                 p.stroke(p.lerpColor(p.color(0, 255, 255), p.color(255, 0, 255), i / 5));
                 p.noFill();
@@ -227,7 +227,7 @@ const Basics = () => {
               }
               p.fill(255);
               p.noStroke();
-              p.ellipse(0, 0, 10, 10); // Central focus point
+              p.ellipse(0, 0, 10, 10);
             } else p.background(0);
           };
           p.windowResized = () => { canvasWidth = thirdEyeSketchRef.current!.offsetWidth; p.resizeCanvas(canvasWidth, 150); };
@@ -240,7 +240,7 @@ const Basics = () => {
         const sketch = (p: any) => {
           let canvasWidth = mandalaSketchRef.current!.offsetWidth;
           p.setup = () => p.createCanvas(canvasWidth, 300).parent(mandalaSketchRef.current!);
-          p.draw = () => { if (isPlaying) { p.background(255); p.stroke(0); p.strokeWeight(1); const beatFreq = Math.abs(freqRef.current.rightFreq - freqRef.current.leftFreq); const baseRadius = 50 + (beatFreq / 10); const rotation = p.frameCount * (freqRef.current.leftFreq / 1000); const numCircles = Math.floor(beatFreq / 10) + 3; const innerScale = ['Sine', 'Square', 'Sawtooth', 'Triangle'].indexOf(freqRef.current.toneType) / 3 * 0.2 + 0.4; p.push(); p.translate(p.width / 2, p.height / 2); p.rotate(rotation); for (let i = 0; i < numCircles; i++) { let angle = p.TWO_PI / numCircles * i; let x = p.cos(angle) * baseRadius; let y = p.sin(angle) * baseRadius; p.ellipse(x, y, baseRadius * 0.5, baseRadius * 0.5); for (let j = 0; j < 6; j++) { let innerAngle = p.TWO_PI / 6 * j; let innerX = x + p.cos(innerAngle) * (baseRadius * innerScale); let innerY = y + p.sin(innerAngle) * (baseRadius * innerScale); p.ellipse(innerX, innerY, baseRadius * innerScale * 0.6, baseRadius * innerScale * 0.6); } } p.pop(); } else p.background(255); };
+          p.draw = () => { if (isPlaying) { p.background(255); p.stroke(0); p.strokeWeight(1); const beatFreq = Math.abs(freqRef.current.rightFreq - freqRef.current.leftFreq); const baseRadius = 50 + (beatFreq / 10); const rotation = p.frameCount * (freqRef.current.leftFreq / 1000); const numCircles = Math.floor(beatFreq / 10) + 3; const innerScale = ['sine', 'square', 'sawtooth', 'triangle'].indexOf(freqRef.current.toneType) / 3 * 0.2 + 0.4; p.push(); p.translate(p.width / 2, p.height / 2); p.rotate(rotation); for (let i = 0; i < numCircles; i++) { let angle = p.TWO_PI / numCircles * i; let x = p.cos(angle) * baseRadius; let y = p.sin(angle) * baseRadius; p.ellipse(x, y, baseRadius * 0.5, baseRadius * 0.5); for (let j = 0; j < 6; j++) { let innerAngle = p.TWO_PI / 6 * j; let innerX = x + p.cos(innerAngle) * (baseRadius * innerScale); let innerY = y + p.sin(innerAngle) * (baseRadius * innerScale); p.ellipse(innerX, innerY, baseRadius * innerScale * 0.6, baseRadius * innerScale * 0.6); } } p.pop(); } else p.background(255); };
           p.windowResized = () => { canvasWidth = mandalaSketchRef.current!.offsetWidth; p.resizeCanvas(canvasWidth, 300); };
         };
         mandalaSketchRefInstance.current = new window.p5(sketch);
