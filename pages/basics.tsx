@@ -99,29 +99,53 @@ const Basics = () => {
       gainNodeRef.current = new Tone.Gain(volume / 100).toDestination();
       leftPannerRef.current = new Tone.Panner(-1).connect(gainNodeRef.current);
       rightPannerRef.current = new Tone.Panner(1).connect(gainNodeRef.current);
+      console.log('Audio context and nodes set up');
     }
   };
 
-  const startAudio = () => {
-    if (!Tone || !audioContextRef.current || !gainNodeRef.current) return;
+  const startAudio = async () => {
+    if (!Tone) {
+      console.error('Tone.js is not loaded');
+      return;
+    }
+
+    // Start the audio context with user interaction
+    try {
+      await Tone.start();
+      console.log('Audio context started');
+    } catch (error) {
+      console.error('Failed to start audio context:', error);
+      return;
+    }
 
     setupAudio();
-    if (!leftOscillatorRef.current && !rightOscillatorRef.current && !isPlaying) {
-      leftOscillatorRef.current = new Tone.Oscillator(freqRef.current.leftFreq, freqRef.current.toneType).connect(leftPannerRef.current!).start();
-      rightOscillatorRef.current = new Tone.Oscillator(freqRef.current.rightFreq, freqRef.current.toneType).connect(rightPannerRef.current!).start();
+    if (!audioContextRef.current || !gainNodeRef.current) {
+      console.error('Audio context or gain node not initialized');
+      return;
+    }
 
-      // Background music with tone.js
-      const tempo = selectedMood === 'Calm' ? 60 : selectedMood === 'Energetic' ? 80 : 70;
-      Tone.Transport.bpm.value = tempo;
-      bgSynthRef.current = new Tone.PolySynth(Tone.Synth).toDestination();
-      const solfeggioBase = nadaPresets[selectedNada].solfeggioBase;
-      const harmonics = [solfeggioBase, solfeggioBase * 2, solfeggioBase * 3];
-      const sequence = new Tone.Part((time: number, note: number) => { // Explicitly typed parameters
-        bgSynthRef.current!.triggerAttackRelease(note, '2n', time, 0.5);
-      }, harmonics.map(freq => [0, freq])).start(0);
-      sequence.loop = true;
-      sequence.loopEnd = '1m';
-      Tone.Transport.start();
+    if (!leftOscillatorRef.current && !rightOscillatorRef.current && !isPlaying) {
+      try {
+        leftOscillatorRef.current = new Tone.Oscillator(freqRef.current.leftFreq, freqRef.current.toneType).connect(leftPannerRef.current!).start();
+        rightOscillatorRef.current = new Tone.Oscillator(freqRef.current.rightFreq, freqRef.current.toneType).connect(rightPannerRef.current!).start();
+        console.log('Oscillators started');
+
+        // Background music with tone.js
+        const tempo = selectedMood === 'Calm' ? 60 : selectedMood === 'Energetic' ? 80 : 70;
+        Tone.Transport.bpm.value = tempo;
+        bgSynthRef.current = new Tone.PolySynth(Tone.Synth).toDestination();
+        const solfeggioBase = nadaPresets[selectedNada].solfeggioBase;
+        const harmonics = [solfeggioBase, solfeggioBase * 2, solfeggioBase * 3];
+        const sequence = new Tone.Part((time: number, note: number) => {
+          bgSynthRef.current!.triggerAttackRelease(note, '2n', time, 0.5);
+        }, harmonics.map(freq => [0, freq])).start(0);
+        sequence.loop = true;
+        sequence.loopEnd = '1m';
+        Tone.Transport.start();
+        console.log('Background music started');
+      } catch (error) {
+        console.error('Error starting oscillators or background music:', error);
+      }
     }
     setIsPlaying(true);
   };
@@ -130,6 +154,7 @@ const Basics = () => {
     if (Tone && audioContextRef.current) {
       Tone.Transport.pause();
       setIsPlaying(false);
+      console.log('Audio paused');
     }
   };
 
@@ -149,6 +174,7 @@ const Basics = () => {
       rightSketchRefInstance.current = null;
       thirdEyeSketchRefInstance.current = null;
       mandalaSketchRefInstance.current = null;
+      console.log('Audio stopped and sketches cleared');
     }
     setIsPlaying(false);
   };
