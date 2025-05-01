@@ -4,7 +4,7 @@ import * as React from 'react';
 import * as SliderPrimitive from '@radix-ui/react-slider';
 
 // Define Nada types
-type NadaName = 'Anahata Nada' | 'Vishuddha Nada' | 'Ajna Nada';
+type NadaName = 'Bhumi' | 'Pravaha' | 'Shanta' | 'Arogya' | 'Chapala' | 'Matri' | 'Samatva' | 'Gupta' | 'Jyoti' | 'Tejas' | 'Sthira' | 'Ananta';
 type NadaPreset = {
   baseFreq: number;
   leftFreq: number;
@@ -18,14 +18,14 @@ type FreqRef = {
 };
 
 const Basics = () => {
-  const [selectedNada, setSelectedNada] = React.useState<NadaName>('Anahata Nada');
+  const [selectedNada, setSelectedNada] = React.useState<NadaName>('Bhumi');
   const [volume, setVolume] = React.useState(50);
   const [toneType, setToneType] = React.useState('Sine');
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [p5Loaded, setP5Loaded] = React.useState(false);
   const leftSketchRef = React.useRef<HTMLDivElement>(null);
   const rightSketchRef = React.useRef<HTMLDivElement>(null);
-  const overlapSketchRef = React.useRef<HTMLDivElement>(null);
+  const discSketchRef = React.useRef<HTMLDivElement>(null);
   const mandalaSketchRef = React.useRef<HTMLDivElement>(null);
   const audioContextRef = React.useRef<AudioContext | null>(null);
   const leftOscillatorRef = React.useRef<OscillatorNode | null>(null);
@@ -35,20 +35,29 @@ const Basics = () => {
   const gainNodeRef = React.useRef<GainNode | null>(null);
   const leftSketchRefInstance = React.useRef<any>(null);
   const rightSketchRefInstance = React.useRef<any>(null);
-  const overlapSketchRefInstance = React.useRef<any>(null);
+  const discSketchRefInstance = React.useRef<any>(null);
   const mandalaSketchRefInstance = React.useRef<any>(null);
-  const freqRef = React.useRef<FreqRef>({ leftFreq: 174, rightFreq: 178, toneType: 'Sine' });
+  const freqRef = React.useRef<FreqRef>({ leftFreq: 7.83, rightFreq: 11.83, toneType: 'Sine' });
 
-  // Nada frequency presets
+  // Nada frequency presets with binaural offsets
   const nadaPresets: Record<NadaName, NadaPreset> = {
-    'Anahata Nada': { baseFreq: 174, leftFreq: 174, rightFreq: 178, description: 'Heart Chakra - Promotes love and balance (4 Hz beat)' },
-    'Vishuddha Nada': { baseFreq: 285, leftFreq: 285, rightFreq: 291, description: 'Throat Chakra - Enhances communication (6 Hz beat)' },
-    'Ajna Nada': { baseFreq: 396, leftFreq: 396, rightFreq: 402, description: 'Third Eye Chakra - Supports intuition (6 Hz beat)' },
+    'Bhumi': { baseFreq: 7.83, leftFreq: 7.83, rightFreq: 11.83, description: "Earth's vibration - Grounding and stability" },
+    'Pravaha': { baseFreq: 174, leftFreq: 174, rightFreq: 178, description: "Relieves Pain & Stress - Calming and soothing" },
+    'Shanta': { baseFreq: 285, leftFreq: 285, rightFreq: 291, description: "Heals Tissues & Organs - Restorative energy" },
+    'Arogya': { baseFreq: 396, leftFreq: 396, rightFreq: 402, description: "Eliminates Fear - Courage and confidence" },
+    'Chapala': { baseFreq: 417, leftFreq: 417, rightFreq: 423, description: "Wipes out Negativity - Cleansing and renewal" },
+    'Matri': { baseFreq: 528, leftFreq: 528, rightFreq: 534, description: "Repairs DNA, Brings Positive Transformation - Healing and growth" },
+    'Samatva': { baseFreq: 639, leftFreq: 639, rightFreq: 645, description: "Brings Love & Compassion in Life - Emotional balance" },
+    'Gupta': { baseFreq: 741, leftFreq: 741, rightFreq: 747, description: "Detoxifies Cells & Organs - Purification" },
+    'Jyoti': { baseFreq: 852, leftFreq: 852, rightFreq: 858, description: "Awakens Intuition, Raises Energy - Insight and vitality" },
+    'Tejas': { baseFreq: 963, leftFreq: 963, rightFreq: 969, description: "Connects to Higher Self - Spiritual connection" },
+    'Sthira': { baseFreq: 1074, leftFreq: 1074, rightFreq: 1080, description: "Consciousness Expansion - Awareness and clarity" },
+    'Ananta': { baseFreq: 1179, leftFreq: 1179, rightFreq: 1185, description: "Cosmic Connection - Universal harmony" },
   };
 
   // Sync frequencies with selected Nada
   React.useEffect(() => {
-    const preset = nadaPresets[selectedNada as NadaName]; // Explicitly cast to ensure type safety
+    const preset = nadaPresets[selectedNada as NadaName];
     freqRef.current = { leftFreq: preset.leftFreq, rightFreq: preset.rightFreq, toneType };
   }, [selectedNada, toneType]);
 
@@ -138,11 +147,11 @@ const Basics = () => {
       rightOscillatorRef.current = null;
       leftSketchRefInstance.current?.remove();
       rightSketchRefInstance.current?.remove();
-      overlapSketchRefInstance.current?.remove();
+      discSketchRefInstance.current?.remove();
       mandalaSketchRefInstance.current?.remove();
       leftSketchRefInstance.current = null;
       rightSketchRefInstance.current = null;
-      overlapSketchRefInstance.current = null;
+      discSketchRefInstance.current = null;
       mandalaSketchRefInstance.current = null;
     }
     setIsPlaying(false);
@@ -175,7 +184,7 @@ const Basics = () => {
       return;
     }
 
-    if (!leftSketchRef.current || !rightSketchRef.current || !overlapSketchRef.current || !mandalaSketchRef.current) {
+    if (!leftSketchRef.current || !rightSketchRef.current || !discSketchRef.current || !mandalaSketchRef.current) {
       console.error('One or more refs not ready');
       return;
     }
@@ -200,6 +209,7 @@ const Basics = () => {
         }
       };
 
+      // Left Frequency Waveform
       if (!leftSketchRefInstance.current) {
         const sketch = (p: any) => {
           let canvasWidth = leftSketchRef.current!.offsetWidth;
@@ -234,6 +244,7 @@ const Basics = () => {
         leftSketchRefInstance.current = new window.p5(sketch);
       }
 
+      // Right Frequency Waveform
       if (!rightSketchRefInstance.current) {
         const sketch = (p: any) => {
           let canvasWidth = rightSketchRef.current!.offsetWidth;
@@ -268,41 +279,109 @@ const Basics = () => {
         rightSketchRefInstance.current = new window.p5(sketch);
       }
 
-      if (!overlapSketchRefInstance.current) {
+      // Hypnotic Spiraling Disc
+      if (!discSketchRefInstance.current) {
         const sketch = (p: any) => {
-          let canvasWidth = overlapSketchRef.current!.offsetWidth;
+          let canvasWidth = discSketchRef.current!.offsetWidth;
           p.setup = () => {
-            p.createCanvas(canvasWidth, 150).parent(overlapSketchRef.current!);
+            p.createCanvas(canvasWidth, 150).parent(discSketchRef.current!);
             p.background(255);
-            console.log('Overlap sketch setup, width:', canvasWidth);
+            console.log('Disc sketch setup, width:', canvasWidth);
           };
 
           p.draw = () => {
             if (isPlaying) {
               p.background(255);
-              p.stroke(255, 215, 0);
-              p.strokeWeight(3);
-              const beatFreq = Math.abs(freqRef.current.rightFreq - freqRef.current.leftFreq);
-              const amplitude = (volume / 100) * 50;
-              for (let x = 0; x < p.width; x++) {
-                let y = p.height / 2 + getWaveformValue(p, x, beatFreq, freqRef.current.toneType, p.frameCount * 0.05 * (beatFreq / 10), amplitude);
-                p.point(x, y);
+              const centerX = p.width / 2;
+              const centerY = p.height / 2;
+              const radius = p.min(p.width, p.height) * 0.4;
+              const speed = (freqRef.current.leftFreq / 100) * 0.01; // Vary speed by frequency
+
+              p.translate(centerX, centerY);
+              p.rotate(p.frameCount * speed);
+
+              // Variation based on Nada
+              let color, spiralDensity;
+              switch (selectedNada) {
+                case 'Bhumi':
+                  color = p.color(34, 139, 34); // Forest green for grounding
+                  spiralDensity = 10;
+                  break;
+                case 'Pravaha':
+                  color = p.color(173, 216, 230); // Light blue for calming
+                  spiralDensity = 12;
+                  break;
+                case 'Shanta':
+                  color = p.color(144, 238, 144); // Light green for healing
+                  spiralDensity = 14;
+                  break;
+                case 'Arogya':
+                  color = p.color(255, 165, 0); // Orange for courage
+                  spiralDensity = 16;
+                  break;
+                case 'Chapala':
+                  color = p.color(255, 182, 193); // Pink for cleansing
+                  spiralDensity = 18;
+                  break;
+                case 'Matri':
+                  color = p.color(255, 215, 0); // Gold for transformation
+                  spiralDensity = 20;
+                  break;
+                case 'Samatva':
+                  color = p.color(221, 160, 221); // Plum for compassion
+                  spiralDensity = 22;
+                  break;
+                case 'Gupta':
+                  color = p.color(135, 206, 235); // Sky blue for purification
+                  spiralDensity = 24;
+                  break;
+                case 'Jyoti':
+                  color = p.color(255, 255, 0); // Yellow for intuition
+                  spiralDensity = 26;
+                  break;
+                case 'Tejas':
+                  color = p.color(255, 99, 71); // Tomato for higher self
+                  spiralDensity = 28;
+                  break;
+                case 'Sthira':
+                  color = p.color(186, 85, 211); // Medium orchid for expansion
+                  spiralDensity = 30;
+                  break;
+                case 'Ananta':
+                  color = p.color(0, 191, 255); // Deep sky blue for cosmic
+                  spiralDensity = 32;
+                  break;
+                default:
+                  color = p.color(0);
+                  spiralDensity = 15;
               }
-              console.log('Overlap sketch drawing, beatFreq:', beatFreq, 'volume:', volume, 'toneType:', freqRef.current.toneType);
+
+              p.stroke(color);
+              p.noFill();
+              for (let i = 0; i < spiralDensity; i++) {
+                let angle = p.map(i, 0, spiralDensity, 0, p.TWO_PI * 2);
+                let r = radius * (i / spiralDensity);
+                let x = r * p.cos(angle);
+                let y = r * p.sin(angle);
+                p.line(0, 0, x, y);
+              }
+
+              console.log('Disc sketch drawing, nada:', selectedNada, 'speed:', speed);
             } else {
               p.background(255);
             }
           };
 
           p.windowResized = () => {
-            canvasWidth = overlapSketchRef.current!.offsetWidth;
+            canvasWidth = discSketchRef.current!.offsetWidth;
             p.resizeCanvas(canvasWidth, 150);
-            console.log('Overlap sketch resized, new width:', canvasWidth);
+            console.log('Disc sketch resized, new width:', canvasWidth);
           };
         };
-        overlapSketchRefInstance.current = new window.p5(sketch);
+        discSketchRefInstance.current = new window.p5(sketch);
       }
 
+      // Sacred Geometry Mandala
       if (!mandalaSketchRefInstance.current) {
         const sketch = (p: any) => {
           let canvasWidth = mandalaSketchRef.current!.offsetWidth;
@@ -366,11 +445,11 @@ const Basics = () => {
     return () => {
       leftSketchRefInstance.current?.remove();
       rightSketchRefInstance.current?.remove();
-      overlapSketchRefInstance.current?.remove();
+      discSketchRefInstance.current?.remove();
       mandalaSketchRefInstance.current?.remove();
       leftSketchRefInstance.current = null;
       rightSketchRefInstance.current = null;
-      overlapSketchRefInstance.current = null;
+      discSketchRefInstance.current = null;
       mandalaSketchRefInstance.current = null;
     };
   }, [p5Loaded, isPlaying]);
@@ -469,11 +548,11 @@ const Basics = () => {
           </div>
         </div>
 
-        {/* Overlap Waveform */}
+        {/* Hypnotic Spiraling Disc */}
         <div className="p-4 bg-gray-50 rounded-lg shadow-inner mb-6">
-          <label className="block font-semibold text-sm text-gray-700">Overlap (Beat Frequency)</label>
+          <label className="block font-semibold text-sm text-gray-700">Hypnotic Focus Disc</label>
           <div
-            ref={overlapSketchRef}
+            ref={discSketchRef}
             className="border-2 border-gray-200 rounded-lg overflow-hidden w-full"
             style={{ position: 'relative', height: '150px' }}
           ></div>
