@@ -10,19 +10,21 @@ type NadaPreset = {
   leftFreq: number;
   rightFreq: number;
   description: string;
+  toneType: string; // Added to preset tone dynamically
 };
 type FreqRef = {
   leftFreq: number;
   rightFreq: number;
   toneType: string;
 };
+type Mood = 'Calm' | 'Energetic' | 'Meditative';
 
 const Basics = () => {
   const [selectedNada, setSelectedNada] = React.useState<NadaName>('Bhumi');
   const [volume, setVolume] = React.useState(50);
-  const [toneType, setToneType] = React.useState('Sine');
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [p5Loaded, setP5Loaded] = React.useState(false);
+  const [selectedMood, setSelectedMood] = React.useState<Mood>('Calm');
   const leftSketchRef = React.useRef<HTMLDivElement>(null);
   const rightSketchRef = React.useRef<HTMLDivElement>(null);
   const discSketchRef = React.useRef<HTMLDivElement>(null);
@@ -33,33 +35,35 @@ const Basics = () => {
   const leftPannerRef = React.useRef<StereoPannerNode | null>(null);
   const rightPannerRef = React.useRef<StereoPannerNode | null>(null);
   const gainNodeRef = React.useRef<GainNode | null>(null);
+  const bgGainNodeRef = React.useRef<GainNode | null>(null);
+  const bgOscillatorsRef = React.useRef<(OscillatorNode | null)[]>([]);
   const leftSketchRefInstance = React.useRef<any>(null);
   const rightSketchRefInstance = React.useRef<any>(null);
   const discSketchRefInstance = React.useRef<any>(null);
   const mandalaSketchRefInstance = React.useRef<any>(null);
   const freqRef = React.useRef<FreqRef>({ leftFreq: 7.83, rightFreq: 11.83, toneType: 'Sine' });
 
-  // Nada frequency presets with binaural offsets
+  // Nada frequency presets with binaural offsets and tone types
   const nadaPresets: Record<NadaName, NadaPreset> = {
-    'Bhumi': { baseFreq: 7.83, leftFreq: 7.83, rightFreq: 11.83, description: "Earth's vibration - Grounding and stability" },
-    'Pravaha': { baseFreq: 174, leftFreq: 174, rightFreq: 178, description: "Relieves Pain & Stress - Calming and soothing" },
-    'Shanta': { baseFreq: 285, leftFreq: 285, rightFreq: 291, description: "Heals Tissues & Organs - Restorative energy" },
-    'Arogya': { baseFreq: 396, leftFreq: 396, rightFreq: 402, description: "Eliminates Fear - Courage and confidence" },
-    'Chapala': { baseFreq: 417, leftFreq: 417, rightFreq: 423, description: "Wipes out Negativity - Cleansing and renewal" },
-    'Matri': { baseFreq: 528, leftFreq: 528, rightFreq: 534, description: "Repairs DNA, Brings Positive Transformation - Healing and growth" },
-    'Samatva': { baseFreq: 639, leftFreq: 639, rightFreq: 645, description: "Brings Love & Compassion in Life - Emotional balance" },
-    'Gupta': { baseFreq: 741, leftFreq: 741, rightFreq: 747, description: "Detoxifies Cells & Organs - Purification" },
-    'Jyoti': { baseFreq: 852, leftFreq: 852, rightFreq: 858, description: "Awakens Intuition, Raises Energy - Insight and vitality" },
-    'Tejas': { baseFreq: 963, leftFreq: 963, rightFreq: 969, description: "Connects to Higher Self - Spiritual connection" },
-    'Sthira': { baseFreq: 1074, leftFreq: 1074, rightFreq: 1080, description: "Consciousness Expansion - Awareness and clarity" },
-    'Ananta': { baseFreq: 1179, leftFreq: 1179, rightFreq: 1185, description: "Cosmic Connection - Universal harmony" },
+    'Bhumi': { baseFreq: 7.83, leftFreq: 7.83, rightFreq: 11.83, description: "Earth's vibration - Grounding and stability", toneType: 'Sine' },
+    'Pravaha': { baseFreq: 174, leftFreq: 174, rightFreq: 178, description: "Relieves Pain & Stress - Calming and soothing", toneType: 'Sine' },
+    'Shanta': { baseFreq: 285, leftFreq: 285, rightFreq: 291, description: "Heals Tissues & Organs - Restorative energy", toneType: 'Sine' },
+    'Arogya': { baseFreq: 396, leftFreq: 396, rightFreq: 402, description: "Eliminates Fear - Courage and confidence", toneType: 'Square' },
+    'Chapala': { baseFreq: 417, leftFreq: 417, rightFreq: 423, description: "Wipes out Negativity - Cleansing and renewal", toneType: 'Sawtooth' },
+    'Matri': { baseFreq: 528, leftFreq: 528, rightFreq: 534, description: "Repairs DNA, Brings Positive Transformation - Healing and growth", toneType: 'Sine' },
+    'Samatva': { baseFreq: 639, leftFreq: 639, rightFreq: 645, description: "Brings Love & Compassion in Life - Emotional balance", toneType: 'Sine' },
+    'Gupta': { baseFreq: 741, leftFreq: 741, rightFreq: 747, description: "Detoxifies Cells & Organs - Purification", toneType: 'Triangle' },
+    'Jyoti': { baseFreq: 852, leftFreq: 852, rightFreq: 858, description: "Awakens Intuition, Raises Energy - Insight and vitality", toneType: 'Square' },
+    'Tejas': { baseFreq: 963, leftFreq: 963, rightFreq: 969, description: "Connects to Higher Self - Spiritual connection", toneType: 'Sine' },
+    'Sthira': { baseFreq: 1074, leftFreq: 1074, rightFreq: 1080, description: "Consciousness Expansion - Awareness and clarity", toneType: 'Sawtooth' },
+    'Ananta': { baseFreq: 1179, leftFreq: 1179, rightFreq: 1185, description: "Cosmic Connection - Universal harmony", toneType: 'Triangle' },
   };
 
-  // Sync frequencies with selected Nada
+  // Sync frequencies and tone with selected Nada
   React.useEffect(() => {
     const preset = nadaPresets[selectedNada as NadaName];
-    freqRef.current = { leftFreq: preset.leftFreq, rightFreq: preset.rightFreq, toneType };
-  }, [selectedNada, toneType]);
+    freqRef.current = { leftFreq: preset.leftFreq, rightFreq: preset.rightFreq, toneType: preset.toneType };
+  }, [selectedNada]);
 
   // Load p5.js script dynamically
   React.useEffect(() => {
@@ -104,6 +108,10 @@ const Basics = () => {
       rightPannerRef.current = audioContextRef.current.createStereoPanner();
       rightPannerRef.current.pan.setValueAtTime(1, audioContextRef.current.currentTime);
       rightPannerRef.current.connect(gainNodeRef.current);
+
+      bgGainNodeRef.current = audioContextRef.current.createGain();
+      bgGainNodeRef.current.gain.setValueAtTime(0.3, audioContextRef.current.currentTime); // Lower volume for background
+      bgGainNodeRef.current.connect(audioContextRef.current.destination);
     }
   };
 
@@ -111,16 +119,64 @@ const Basics = () => {
     setupAudio();
     if (audioContextRef.current && !leftOscillatorRef.current && !rightOscillatorRef.current && !isPlaying) {
       leftOscillatorRef.current = audioContextRef.current.createOscillator();
-      leftOscillatorRef.current.type = toneType.toLowerCase() as OscillatorType;
+      leftOscillatorRef.current.type = freqRef.current.toneType.toLowerCase() as OscillatorType;
       leftOscillatorRef.current.frequency.setValueAtTime(freqRef.current.leftFreq, audioContextRef.current.currentTime);
       leftOscillatorRef.current.connect(leftPannerRef.current!);
       leftOscillatorRef.current.start();
 
       rightOscillatorRef.current = audioContextRef.current.createOscillator();
-      rightOscillatorRef.current.type = toneType.toLowerCase() as OscillatorType;
+      rightOscillatorRef.current.type = freqRef.current.toneType.toLowerCase() as OscillatorType;
       rightOscillatorRef.current.frequency.setValueAtTime(freqRef.current.rightFreq, audioContextRef.current.currentTime);
       rightOscillatorRef.current.connect(rightPannerRef.current!);
       rightOscillatorRef.current.start();
+
+      // Background music with overtones
+      const baseFreq = freqRef.current.leftFreq * 2; // Double the base for harmony
+      const tempo = selectedMood === 'Calm' ? 0.5 : selectedMood === 'Energetic' ? 2 : 1;
+      bgOscillatorsRef.current = [
+        audioContextRef.current.createOscillator(),
+        audioContextRef.current.createOscillator(),
+        audioContextRef.current.createOscillator()
+      ];
+      bgOscillatorsRef.current.forEach((osc, i) => {
+        if (osc) {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(baseFreq * (i + 1), audioContextRef.current!.currentTime); // Fundamental + overtones
+          const gain = audioContextRef.current.createGain();
+          gain.gain.setValueAtTime(0.3 / (i + 1), audioContextRef.current.currentTime);
+          gain.gain.linearRampToValueAtTime(0, audioContextRef.current.currentTime + 1 / tempo);
+          gain.gain.linearRampToValueAtTime(0.3 / (i + 1), audioContextRef.current.currentTime + 2 / tempo);
+          osc.connect(gain);
+          gain.connect(bgGainNodeRef.current!);
+          osc.start();
+          osc.stop(audioContextRef.current.currentTime + 4 / tempo);
+        }
+      });
+      setInterval(() => {
+        if (isPlaying && bgOscillatorsRef.current.every(osc => !osc || osc.playbackState === 'finished')) {
+          bgOscillatorsRef.current.forEach(osc => osc?.stop());
+          bgOscillatorsRef.current = bgOscillatorsRef.current.map(() => null);
+          const newOscillators = [
+            audioContextRef.current!.createOscillator(),
+            audioContextRef.current!.createOscillator(),
+            audioContextRef.current!.createOscillator()
+          ];
+          newOscillators.forEach((osc, i) => {
+            if (osc) {
+              osc.type = 'sine';
+              osc.frequency.setValueAtTime(baseFreq * (i + 1), audioContextRef.current!.currentTime);
+              const gain = audioContextRef.current!.createGain();
+              gain.gain.setValueAtTime(0, audioContextRef.current!.currentTime);
+              gain.gain.linearRampToValueAtTime(0.3 / (i + 1), audioContextRef.current!.currentTime + 0.5 / tempo);
+              osc.connect(gain);
+              gain.connect(bgGainNodeRef.current!);
+              osc.start();
+              osc.stop(audioContextRef.current!.currentTime + 4 / tempo);
+            }
+          });
+          bgOscillatorsRef.current = newOscillators;
+        }
+      }, 1000 / tempo);
     }
     setIsPlaying(true);
   };
@@ -132,19 +188,14 @@ const Basics = () => {
     }
   };
 
-  const resumeAudio = () => {
-    if (audioContextRef.current) {
-      audioContextRef.current.resume();
-      setIsPlaying(true);
-    }
-  };
-
   const stopAudio = () => {
     if (leftOscillatorRef.current && rightOscillatorRef.current) {
       leftOscillatorRef.current.stop();
       rightOscillatorRef.current.stop();
       leftOscillatorRef.current = null;
       rightOscillatorRef.current = null;
+      bgOscillatorsRef.current.forEach(osc => osc?.stop());
+      bgOscillatorsRef.current = [];
       leftSketchRefInstance.current?.remove();
       rightSketchRefInstance.current?.remove();
       discSketchRefInstance.current?.remove();
@@ -172,10 +223,10 @@ const Basics = () => {
 
   React.useEffect(() => {
     if (leftOscillatorRef.current && rightOscillatorRef.current) {
-      leftOscillatorRef.current.type = toneType.toLowerCase() as OscillatorType;
-      rightOscillatorRef.current.type = toneType.toLowerCase() as OscillatorType;
+      leftOscillatorRef.current.type = freqRef.current.toneType.toLowerCase() as OscillatorType;
+      rightOscillatorRef.current.type = freqRef.current.toneType.toLowerCase() as OscillatorType;
     }
-  }, [toneType]);
+  }, [freqRef.current.toneType]);
 
   // Initialize p5.js sketches
   React.useEffect(() => {
@@ -295,60 +346,59 @@ const Basics = () => {
               const centerX = p.width / 2;
               const centerY = p.height / 2;
               const radius = p.min(p.width, p.height) * 0.4;
-              const speed = (freqRef.current.leftFreq / 100) * 0.01; // Vary speed by frequency
+              const speed = (freqRef.current.leftFreq / 100) * 0.01;
 
               p.translate(centerX, centerY);
               p.rotate(p.frameCount * speed);
 
-              // Variation based on Nada
               let color, spiralDensity;
               switch (selectedNada) {
                 case 'Bhumi':
-                  color = p.color(34, 139, 34); // Forest green for grounding
+                  color = p.color(34, 139, 34); // Forest green
                   spiralDensity = 10;
                   break;
                 case 'Pravaha':
-                  color = p.color(173, 216, 230); // Light blue for calming
+                  color = p.color(173, 216, 230); // Light blue
                   spiralDensity = 12;
                   break;
                 case 'Shanta':
-                  color = p.color(144, 238, 144); // Light green for healing
+                  color = p.color(144, 238, 144); // Light green
                   spiralDensity = 14;
                   break;
                 case 'Arogya':
-                  color = p.color(255, 165, 0); // Orange for courage
+                  color = p.color(255, 165, 0); // Orange
                   spiralDensity = 16;
                   break;
                 case 'Chapala':
-                  color = p.color(255, 182, 193); // Pink for cleansing
+                  color = p.color(255, 182, 193); // Pink
                   spiralDensity = 18;
                   break;
                 case 'Matri':
-                  color = p.color(255, 215, 0); // Gold for transformation
+                  color = p.color(255, 215, 0); // Gold
                   spiralDensity = 20;
                   break;
                 case 'Samatva':
-                  color = p.color(221, 160, 221); // Plum for compassion
+                  color = p.color(221, 160, 221); // Plum
                   spiralDensity = 22;
                   break;
                 case 'Gupta':
-                  color = p.color(135, 206, 235); // Sky blue for purification
+                  color = p.color(135, 206, 235); // Sky blue
                   spiralDensity = 24;
                   break;
                 case 'Jyoti':
-                  color = p.color(255, 255, 0); // Yellow for intuition
+                  color = p.color(255, 255, 0); // Yellow
                   spiralDensity = 26;
                   break;
                 case 'Tejas':
-                  color = p.color(255, 99, 71); // Tomato for higher self
+                  color = p.color(255, 99, 71); // Tomato
                   spiralDensity = 28;
                   break;
                 case 'Sthira':
-                  color = p.color(186, 85, 211); // Medium orchid for expansion
+                  color = p.color(186, 85, 211); // Medium orchid
                   spiralDensity = 30;
                   break;
                 case 'Ananta':
-                  color = p.color(0, 191, 255); // Deep sky blue for cosmic
+                  color = p.color(0, 191, 255); // Deep sky blue
                   spiralDensity = 32;
                   break;
                 default:
@@ -476,16 +526,15 @@ const Basics = () => {
           </div>
 
           <div>
-            <label className="block text-gray-700 text-sm sm:text-base">Tone Type</label>
+            <label className="block text-gray-700 text-sm sm:text-base">Select Mood for Background Music</label>
             <select
-              value={toneType}
-              onChange={(e) => setToneType(e.target.value)}
+              value={selectedMood}
+              onChange={(e) => setSelectedMood(e.target.value as Mood)}
               className="w-full p-2 border border-gray-300 rounded-lg bg-white text-gray-800 shadow-inner text-sm sm:text-base"
             >
-              <option>Sine</option>
-              <option>Square</option>
-              <option>Sawtooth</option>
-              <option>Triangle</option>
+              <option>Calm</option>
+              <option>Energetic</option>
+              <option>Meditative</option>
             </select>
           </div>
 
@@ -509,16 +558,10 @@ const Basics = () => {
         {/* Buttons */}
         <div className="flex flex-wrap gap-3 mb-6">
           <button
-            onClick={isPlaying ? resumeAudio : startAudio}
+            onClick={isPlaying ? pauseAudio : startAudio}
             className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition duration-200 shadow-md text-sm sm:text-base"
           >
-            {isPlaying ? 'Resume' : 'Play'}
-          </button>
-          <button
-            onClick={pauseAudio}
-            className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition duration-200 shadow-md text-sm sm:text-base"
-          >
-            Pause
+            {isPlaying ? 'Pause' : 'Play'}
           </button>
           <button
             onClick={stopAudio}
