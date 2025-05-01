@@ -37,6 +37,7 @@ const Basics = () => {
   const gainNodeRef = React.useRef<GainNode | null>(null);
   const bgGainNodeRef = React.useRef<GainNode | null>(null);
   const bgOscillatorsRef = React.useRef<(OscillatorNode | null)[]>([]);
+  const bgStopTimesRef = React.useRef<number[]>([]); // Track stop times for background oscillators
   const leftSketchRefInstance = React.useRef<any>(null);
   const rightSketchRefInstance = React.useRef<any>(null);
   const discSketchRefInstance = React.useRef<any>(null);
@@ -117,7 +118,7 @@ const Basics = () => {
 
   const startAudio = () => {
     setupAudio();
-    if (!audioContextRef.current) return; // Guard against null
+    if (!audioContextRef.current) return;
 
     if (!leftOscillatorRef.current && !rightOscillatorRef.current && !isPlaying) {
       leftOscillatorRef.current = audioContextRef.current.createOscillator();
@@ -135,11 +136,13 @@ const Basics = () => {
       // Background music with overtones
       const baseFreq = freqRef.current.leftFreq * 2;
       const tempo = selectedMood === 'Calm' ? 0.5 : selectedMood === 'Energetic' ? 2 : 1;
+      const duration = 4 / tempo;
       bgOscillatorsRef.current = [
         audioContextRef.current.createOscillator(),
         audioContextRef.current.createOscillator(),
         audioContextRef.current.createOscillator()
       ];
+      bgStopTimesRef.current = [];
       bgOscillatorsRef.current.forEach((osc, i) => {
         if (osc && audioContextRef.current) {
           osc.type = 'sine';
@@ -151,12 +154,13 @@ const Basics = () => {
           osc.connect(gain);
           gain.connect(bgGainNodeRef.current!);
           osc.start();
-          osc.stop(audioContextRef.current.currentTime + 4 / tempo);
+          osc.stop(audioContextRef.current.currentTime + duration);
+          bgStopTimesRef.current[i] = audioContextRef.current.currentTime + duration;
         }
       });
 
       setInterval(() => {
-        if (isPlaying && bgOscillatorsRef.current.every(osc => !osc || osc.playbackState === 'finished') && audioContextRef.current) {
+        if (isPlaying && audioContextRef.current && bgStopTimesRef.current.every(stopTime => audioContextRef.current!.currentTime >= stopTime)) {
           bgOscillatorsRef.current.forEach(osc => osc?.stop());
           bgOscillatorsRef.current = bgOscillatorsRef.current.map(() => null);
           const newOscillators = [
@@ -164,6 +168,7 @@ const Basics = () => {
             audioContextRef.current.createOscillator(),
             audioContextRef.current.createOscillator()
           ];
+          bgStopTimesRef.current = [];
           newOscillators.forEach((osc, i) => {
             if (osc && audioContextRef.current) {
               osc.type = 'sine';
@@ -174,7 +179,8 @@ const Basics = () => {
               osc.connect(gain);
               gain.connect(bgGainNodeRef.current!);
               osc.start();
-              osc.stop(audioContextRef.current.currentTime + 4 / tempo);
+              osc.stop(audioContextRef.current.currentTime + duration);
+              bgStopTimesRef.current[i] = audioContextRef.current.currentTime + duration;
             }
           });
           bgOscillatorsRef.current = newOscillators;
@@ -199,6 +205,7 @@ const Basics = () => {
       rightOscillatorRef.current = null;
       bgOscillatorsRef.current.forEach(osc => osc?.stop());
       bgOscillatorsRef.current = [];
+      bgStopTimesRef.current = [];
       leftSketchRefInstance.current?.remove();
       rightSketchRefInstance.current?.remove();
       discSketchRefInstance.current?.remove();
