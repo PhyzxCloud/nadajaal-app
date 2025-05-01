@@ -10,7 +10,7 @@ type NadaPreset = {
   leftFreq: number;
   rightFreq: number;
   description: string;
-  toneType: string; // Added to preset tone dynamically
+  toneType: string;
 };
 type FreqRef = {
   leftFreq: number;
@@ -110,14 +110,16 @@ const Basics = () => {
       rightPannerRef.current.connect(gainNodeRef.current);
 
       bgGainNodeRef.current = audioContextRef.current.createGain();
-      bgGainNodeRef.current.gain.setValueAtTime(0.3, audioContextRef.current.currentTime); // Lower volume for background
+      bgGainNodeRef.current.gain.setValueAtTime(0.3, audioContextRef.current.currentTime);
       bgGainNodeRef.current.connect(audioContextRef.current.destination);
     }
   };
 
   const startAudio = () => {
     setupAudio();
-    if (audioContextRef.current && !leftOscillatorRef.current && !rightOscillatorRef.current && !isPlaying) {
+    if (!audioContextRef.current) return; // Guard against null
+
+    if (!leftOscillatorRef.current && !rightOscillatorRef.current && !isPlaying) {
       leftOscillatorRef.current = audioContextRef.current.createOscillator();
       leftOscillatorRef.current.type = freqRef.current.toneType.toLowerCase() as OscillatorType;
       leftOscillatorRef.current.frequency.setValueAtTime(freqRef.current.leftFreq, audioContextRef.current.currentTime);
@@ -131,7 +133,7 @@ const Basics = () => {
       rightOscillatorRef.current.start();
 
       // Background music with overtones
-      const baseFreq = freqRef.current.leftFreq * 2; // Double the base for harmony
+      const baseFreq = freqRef.current.leftFreq * 2;
       const tempo = selectedMood === 'Calm' ? 0.5 : selectedMood === 'Energetic' ? 2 : 1;
       bgOscillatorsRef.current = [
         audioContextRef.current.createOscillator(),
@@ -139,9 +141,9 @@ const Basics = () => {
         audioContextRef.current.createOscillator()
       ];
       bgOscillatorsRef.current.forEach((osc, i) => {
-        if (osc) {
+        if (osc && audioContextRef.current) {
           osc.type = 'sine';
-          osc.frequency.setValueAtTime(baseFreq * (i + 1), audioContextRef.current!.currentTime); // Fundamental + overtones
+          osc.frequency.setValueAtTime(baseFreq * (i + 1), audioContextRef.current.currentTime);
           const gain = audioContextRef.current.createGain();
           gain.gain.setValueAtTime(0.3 / (i + 1), audioContextRef.current.currentTime);
           gain.gain.linearRampToValueAtTime(0, audioContextRef.current.currentTime + 1 / tempo);
@@ -152,26 +154,27 @@ const Basics = () => {
           osc.stop(audioContextRef.current.currentTime + 4 / tempo);
         }
       });
+
       setInterval(() => {
-        if (isPlaying && bgOscillatorsRef.current.every(osc => !osc || osc.playbackState === 'finished')) {
+        if (isPlaying && bgOscillatorsRef.current.every(osc => !osc || osc.playbackState === 'finished') && audioContextRef.current) {
           bgOscillatorsRef.current.forEach(osc => osc?.stop());
           bgOscillatorsRef.current = bgOscillatorsRef.current.map(() => null);
           const newOscillators = [
-            audioContextRef.current!.createOscillator(),
-            audioContextRef.current!.createOscillator(),
-            audioContextRef.current!.createOscillator()
+            audioContextRef.current.createOscillator(),
+            audioContextRef.current.createOscillator(),
+            audioContextRef.current.createOscillator()
           ];
           newOscillators.forEach((osc, i) => {
-            if (osc) {
+            if (osc && audioContextRef.current) {
               osc.type = 'sine';
-              osc.frequency.setValueAtTime(baseFreq * (i + 1), audioContextRef.current!.currentTime);
-              const gain = audioContextRef.current!.createGain();
-              gain.gain.setValueAtTime(0, audioContextRef.current!.currentTime);
-              gain.gain.linearRampToValueAtTime(0.3 / (i + 1), audioContextRef.current!.currentTime + 0.5 / tempo);
+              osc.frequency.setValueAtTime(baseFreq * (i + 1), audioContextRef.current.currentTime);
+              const gain = audioContextRef.current.createGain();
+              gain.gain.setValueAtTime(0, audioContextRef.current.currentTime);
+              gain.gain.linearRampToValueAtTime(0.3 / (i + 1), audioContextRef.current.currentTime + 0.5 / tempo);
               osc.connect(gain);
               gain.connect(bgGainNodeRef.current!);
               osc.start();
-              osc.stop(audioContextRef.current!.currentTime + 4 / tempo);
+              osc.stop(audioContextRef.current.currentTime + 4 / tempo);
             }
           });
           bgOscillatorsRef.current = newOscillators;
@@ -210,14 +213,14 @@ const Basics = () => {
 
   // Update volume and frequency in real-time
   React.useEffect(() => {
-    if (leftOscillatorRef.current) {
-      leftOscillatorRef.current.frequency.setValueAtTime(freqRef.current.leftFreq, audioContextRef.current!.currentTime);
+    if (leftOscillatorRef.current && audioContextRef.current) {
+      leftOscillatorRef.current.frequency.setValueAtTime(freqRef.current.leftFreq, audioContextRef.current.currentTime);
     }
-    if (rightOscillatorRef.current) {
-      rightOscillatorRef.current.frequency.setValueAtTime(freqRef.current.rightFreq, audioContextRef.current!.currentTime);
+    if (rightOscillatorRef.current && audioContextRef.current) {
+      rightOscillatorRef.current.frequency.setValueAtTime(freqRef.current.rightFreq, audioContextRef.current.currentTime);
     }
-    if (gainNodeRef.current) {
-      gainNodeRef.current.gain.setValueAtTime(volume / 100, audioContextRef.current!.currentTime);
+    if (gainNodeRef.current && audioContextRef.current) {
+      gainNodeRef.current.gain.setValueAtTime(volume / 100, audioContextRef.current.currentTime);
     }
   }, [volume, freqRef.current.leftFreq, freqRef.current.rightFreq]);
 
@@ -354,51 +357,51 @@ const Basics = () => {
               let color, spiralDensity;
               switch (selectedNada) {
                 case 'Bhumi':
-                  color = p.color(34, 139, 34); // Forest green
+                  color = p.color(34, 139, 34);
                   spiralDensity = 10;
                   break;
                 case 'Pravaha':
-                  color = p.color(173, 216, 230); // Light blue
+                  color = p.color(173, 216, 230);
                   spiralDensity = 12;
                   break;
                 case 'Shanta':
-                  color = p.color(144, 238, 144); // Light green
+                  color = p.color(144, 238, 144);
                   spiralDensity = 14;
                   break;
                 case 'Arogya':
-                  color = p.color(255, 165, 0); // Orange
+                  color = p.color(255, 165, 0);
                   spiralDensity = 16;
                   break;
                 case 'Chapala':
-                  color = p.color(255, 182, 193); // Pink
+                  color = p.color(255, 182, 193);
                   spiralDensity = 18;
                   break;
                 case 'Matri':
-                  color = p.color(255, 215, 0); // Gold
+                  color = p.color(255, 215, 0);
                   spiralDensity = 20;
                   break;
                 case 'Samatva':
-                  color = p.color(221, 160, 221); // Plum
+                  color = p.color(221, 160, 221);
                   spiralDensity = 22;
                   break;
                 case 'Gupta':
-                  color = p.color(135, 206, 235); // Sky blue
+                  color = p.color(135, 206, 235);
                   spiralDensity = 24;
                   break;
                 case 'Jyoti':
-                  color = p.color(255, 255, 0); // Yellow
+                  color = p.color(255, 255, 0);
                   spiralDensity = 26;
                   break;
                 case 'Tejas':
-                  color = p.color(255, 99, 71); // Tomato
+                  color = p.color(255, 99, 71);
                   spiralDensity = 28;
                   break;
                 case 'Sthira':
-                  color = p.color(186, 85, 211); // Medium orchid
+                  color = p.color(186, 85, 211);
                   spiralDensity = 30;
                   break;
                 case 'Ananta':
-                  color = p.color(0, 191, 255); // Deep sky blue
+                  color = p.color(0, 191, 255);
                   spiralDensity = 32;
                   break;
                 default:
