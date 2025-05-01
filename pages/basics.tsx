@@ -3,20 +3,21 @@
 import * as React from 'react';
 import * as SliderPrimitive from '@radix-ui/react-slider';
 
-// Define Nada types
+// Define Nada types with custom toneType union
 type NadaName = 'Bhumi' | 'Pravaha' | 'Shanta' | 'Arogya' | 'Chapala' | 'Matri' | 'Samatva' | 'Gupta' | 'Jyoti' | 'Tejas' | 'Sthira' | 'Ananta';
+type ToneType = 'sine' | 'square' | 'sawtooth' | 'triangle'; // Custom type for tone.js compatibility
 type NadaPreset = {
   baseFreq: number;
   leftFreq: number;
   rightFreq: number;
   description: string;
-  toneType: Tone.ToneOscillatorType;
+  toneType: ToneType;
   solfeggioBase: number;
 };
 type FreqRef = {
   leftFreq: number;
   rightFreq: number;
-  toneType: Tone.ToneOscillatorType;
+  toneType: ToneType;
 };
 type Mood = 'Calm' | 'Energetic' | 'Meditative';
 
@@ -33,7 +34,7 @@ const Basics = () => {
   const rightSketchRef = React.useRef<HTMLDivElement>(null);
   const thirdEyeSketchRef = React.useRef<HTMLDivElement>(null);
   const mandalaSketchRef = React.useRef<HTMLDivElement>(null);
-  const audioContextRef = React.useRef<any>(null); // Type adjusted for dynamic import
+  const audioContextRef = React.useRef<any>(null);
   const leftOscillatorRef = React.useRef<any>(null);
   const rightOscillatorRef = React.useRef<any>(null);
   const leftPannerRef = React.useRef<any>(null);
