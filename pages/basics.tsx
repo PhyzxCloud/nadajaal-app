@@ -21,8 +21,11 @@ type FreqRef = {
 };
 type Mood = 'Calm' | 'Energetic' | 'Meditative';
 
-// Dynamically import Tone.js
-const Tone = typeof window !== 'undefined' ? require('tone') : null;
+// Dynamically import Tone.js with static import
+let Tone: typeof import('tone') | null = null;
+if (typeof window !== 'undefined') {
+  Tone = require('tone');
+}
 
 const Basics = () => {
   const [selectedNada, setSelectedNada] = React.useState<NadaName>('Bhumi');
@@ -109,12 +112,20 @@ const Basics = () => {
       return;
     }
 
-    // Start the audio context with user interaction
+    // Attempt to start the audio context
     try {
-      await Tone.start();
-      console.log('Audio context started');
+      if (Tone.start) {
+        await Tone.start();
+        console.log('Audio context started');
+      } else {
+        console.warn('Tone.start is not available, attempting to resume context');
+        if (audioContextRef.current && audioContextRef.current.state !== 'running') {
+          await audioContextRef.current.resume();
+          console.log('Audio context resumed');
+        }
+      }
     } catch (error) {
-      console.error('Failed to start audio context:', error);
+      console.error('Failed to start/resume audio context:', error);
       return;
     }
 
